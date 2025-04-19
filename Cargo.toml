@@ -1,0 +1,9 @@
+[package]
+name = "plox"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Reserved for a future open-source CLI tool to extract and graph structured data from logs."
+
+
+[dependencies]
