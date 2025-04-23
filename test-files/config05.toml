@@ -1,0 +1,7 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "event_value"
+guard = "c1"
+pattern = "d"
+yvalue = 101.1

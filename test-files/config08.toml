@@ -1,0 +1,35 @@
+[[panels]]
+
+[[panels.lines]]
+guard = "c1"
+field = "d"
+
+[[panels.lines]]
+guard = "x"
+field = "y"
+
+[[panels]]
+
+[[panels.lines]]
+guard = "1"
+field = "A"
+
+[[panels.lines]]
+field = "2"
+
+[[panels]]
+
+[[panels.lines]]
+field = "3"
+
+[[panels.lines]]
+guard = "4"
+field = "B"
+
+[[panels]]
+
+[[panels.lines]]
+field = "5"
+
+[[panels.lines]]
+field = "6"

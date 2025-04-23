@@ -3,7 +3,22 @@ name = "plox"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Reserved for a future open-source CLI tool to extract and graph structured data from logs."
+description = "Turn messy logs into clean graphs. Plot fields or regex matches over time, mark events, count occurrences — all from your terminal."
 
+
+[[bin]]
+name = "plox"
+path = "bin/main.rs"
 
 [dependencies]
+annotate-snippets = "0.11.5"
+chrono = "0.4.40"
+clap = { version = "4.5.35", features = ["cargo", "derive", "string"] }
+color-print = "0.3.7"
+regex = "1.11.1"
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+toml = "0.8.20"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+urlencoding = "2.1.3"

@@ -1,0 +1,5 @@
+[[panel]]
+  [[panel.lines]]
+  data_source = "plot_field"
+  field = "cpu"
+

@@ -1,0 +1,11 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "event_value"
+pattern = "duration"
+yvalue = 666.0
+file_name = "x.log"
+yaxis = "y2"
+line_color = "red"
+marker_type = "circle"
+marker_color = "blue"

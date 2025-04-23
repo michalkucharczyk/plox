@@ -1,0 +1,6 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "event_count"
+guard = "c1"
+pattern = "d"

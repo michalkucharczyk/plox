@@ -1,0 +1,10 @@
+[[panels]]
+panel_title = "A nice title"
+height = 0.3
+yaxis_scale = "log"
+legend = true
+
+[[panels.lines]]
+data_source = "event_value"
+pattern = "duration"
+yvalue = 666.0

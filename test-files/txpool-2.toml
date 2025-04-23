@@ -1,0 +1,58 @@
+[[panels]]
+title = "Maintanance duration"
+yaxis_scale = "log"
+legend = true
+
+[[panels.lines]]
+guard = "maintain"
+field = "duration"
+style = "points"
+
+[[panels]]
+title = "Views/txs"
+legend = true
+
+[[panels.lines]]
+guard = "maintain"
+field = "txs=\\((\\d+),\\s+\\d+\\)"
+style = "steps"
+
+[[panels.lines]]
+guard = "maintain"
+field = "txs=\\(\\d+,\\s+(\\d+)\\)"
+style = "steps"
+
+[[panels.lines]]
+guard = "maintain"
+field = "a"
+yaxis = "y2"
+style = "steps"
+
+[[panels.lines]]
+guard = "maintain"
+field = "i"
+yaxis = "y2"
+style = "steps"
+
+[[panels]]
+[[panels.lines]]
+guard="Prepared block for proposing"
+field="extrinsics_count: (\\d+)"
+style="points"
+
+
+[[panels]]
+[[panels.lines]]
+data_source="event_value"
+yvalue=200
+guard="maintain"
+pattern="event=NewBestBlock"
+style="points"
+
+
+[[panels.lines]]
+data_source="event_value"
+yvalue=200
+guard="maintain"
+pattern="event=Finalized"
+style="points"

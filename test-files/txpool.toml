@@ -1,0 +1,87 @@
+[[panels]]
+panel_title = "Maintanance duration"
+yaxis_scale = "log"
+legend = true
+
+[[panels.lines]]
+guard = "maintain"
+field = "duration"
+style = "points"
+marker_color = "blue"
+marker_type = "cross"
+marker_size = 2.0
+
+[[panels]]
+panel_title = "Views/txs"
+legend = true
+
+[[panels.lines]]
+guard = "maintain"
+field = "txs=\\((\\d+),\\s+\\d+\\)"
+style = "steps"
+line_color = "red"
+
+[[panels.lines]]
+guard = "maintain"
+field = "txs=\\(\\d+,\\s+(\\d+)\\)"
+style = "steps"
+line_color = "blue"
+line_width=2
+
+[[panels.lines]]
+guard = "maintain"
+field = "a"
+yaxis = "y2"
+style = "steps"
+line_color = "black"
+
+[[panels.lines]]
+guard = "maintain"
+field = "i"
+yaxis = "y2"
+style = "steps"
+line_color = "dark-turquoise"
+
+[[panels]]
+[[panels.lines]]
+guard="Prepared block for proposing"
+field="extrinsics_count: (\\d+)"
+style="points"
+marker_type="square-filled"
+marker_color="dark-green"
+marker_size=2.0
+
+
+[[panels]]
+[[panels.lines]]
+data_source="event_delta"
+yvalue=200
+guard="maintain"
+pattern="event=NewBestBlock"
+style="points"
+marker_type="square-filled"
+marker_color="dark-green"
+marker_size=2.0
+
+
+[[panels.lines]]
+data_source="event_delta"
+yvalue=200
+guard="maintain"
+pattern="event=Finalized"
+style="points"
+marker_type="circle"
+marker_color="red"
+marker_size=2.0
+
+
+[[panels]]
+panel_title="Block import"
+
+[[panels.lines]]
+data_source = "event_delta"
+guard = "Parachain"
+pattern = "Imported #"
+style = "points"
+marker_type = "square-filled"
+marker_size = 4.0

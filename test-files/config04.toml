@@ -1,0 +1,6 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "event_value"
+pattern = "d"
+yvalue = 101.1

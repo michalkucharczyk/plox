@@ -1,0 +1,5 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "event_count"
+pattern = "d"

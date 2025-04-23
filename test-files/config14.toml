@@ -1,0 +1,60 @@
+[[panels]]
+panel_title = "Another title"
+height = 0.3
+yaxis_scale = "log"
+legend = true
+
+[[panels.lines]]
+data_source = "event_value"
+pattern = "duration"
+yvalue = 666.0
+file_name = "x.log"
+title = "LineTitle"
+style = "lines-points"
+line_width = 2.4
+line_color = "red"
+dash_style = "dash-dot"
+yaxis = "y2"
+marker_type = "circle"
+marker_color = "blue"
+marker_size = 5.0
+
+[[panels.lines]]
+data_source = "event_value"
+pattern = "duration"
+yvalue = 777.0
+file_name = "y.log"
+style = "lines"
+line_color = "blue"
+yaxis = "y"
+marker_type = "square"
+marker_color = "yellow"
+marker_size = 2.0
+
+[[panels]]
+panel_title = "panel2"
+height = 0.5
+yaxis_scale = "linear"
+legend = false
+
+[[panels.lines]]
+guard = "xxx"
+field = "yyy"
+file_name = "plot1.log"
+style = "lines"
+line_color = "red"
+yaxis = "y"
+marker_type = "circle"
+marker_color = "blue"
+marker_size = 2.0
+
+[[panels.lines]]
+data_source = "event_count"
+pattern = "duration"
+file_name = "plot2.log"
+style = "lines"
+line_color = "dark-turquoise"
+yaxis = "y2"
+marker_type = "dot"
+marker_color = "black"
+marker_size = 2.0
