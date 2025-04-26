@@ -1,17 +1,15 @@
+use crate::{
+	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
+	logging::APPV,
+	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
+};
 use std::{
 	fs::File,
 	io::{self, Write},
 	path::PathBuf,
 	process::{Command, ExitStatus},
 };
-
 use tracing::{debug, info};
-
-use crate::{
-	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
-	logging::APPV,
-	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
-};
 
 const LOG_TARGET: &str = "gnuplot";
 
@@ -105,6 +103,37 @@ impl DashStyle {
 	}
 }
 
+use strum::IntoEnumIterator;
+
+#[derive(Debug, Clone, Copy)]
+struct Style {
+	color: Color,
+	dash: DashStyle,
+	marker: MarkerType,
+}
+
+impl Style {
+	pub fn line_style(&self, i: usize) -> String {
+		format!(
+			"set linetype {} {} {} {} lw 2.0 ps 4.0",
+			i,
+			self.color.to_gnuplot(),
+			self.dash.to_gnuplot(),
+			self.marker.to_gnuplot()
+		)
+	}
+}
+
+fn build_default_styles() -> Vec<Style> {
+	let mut styles = Vec::new();
+	for dash in DashStyle::iter() {
+		for (color, marker) in Color::iter().zip(MarkerType::iter().cycle()) {
+			styles.push(Style { color, dash, marker });
+		}
+	}
+	styles
+}
+
 /// Write a gnuplot script to the given output path based on the graph configuration.
 ///
 /// # Arguments
@@ -135,6 +164,14 @@ pub fn write_gnuplot_script(
 
 	gpwr!(file, "set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500")?;
 	gpwr!(file, "set output '{}'", output_image_path.display())?;
+
+	{
+		let styles = build_default_styles().into_iter().take(20);
+		for (i, style) in styles.enumerate() {
+			gpwr!(file, "{}", style.line_style(i + 1))?;
+		}
+	}
+
 	gpwr!(file, "set datafile separator ','")?;
 	gpwr!(file, "set xdata time")?;
 	gpwr!(file, "set timefmt '%Y-%m-%dT%H:%M:%S'")?;

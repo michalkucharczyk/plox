@@ -504,7 +504,7 @@ pub fn process_inputs(
 			let processor = LineProcessor::from_data_source(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
-				shared_context.timestamp_format.clone(),
+				shared_context.timestamp_format().clone(),
 			)?;
 
 			processors
@@ -576,7 +576,7 @@ pub fn regex_match_preview_inner(
 	let mut processor = LineProcessor::from_data_source(
 		config.data_source.clone(),
 		None,
-		context.timestamp_format.clone(),
+		context.timestamp_format().clone(),
 	)?;
 
 	let input_file = File::open(&context.input)
@@ -968,18 +968,7 @@ mod tests {
 	fn call_propagate_shared_csv_files(
 		config: &mut ResolvedGraphConfig,
 	) -> Result<HashMap<PathBuf, ResolvedLine>, Error> {
-		let shared_context = SharedGraphContext {
-			input: vec![PathBuf::from("input.log")],
-			per_file_panels: false,
-			timestamp_format: DEFAULT_TIMESTAMP_FORMAT.into(),
-			force_csv_regen: false,
-			output_config_path: None,
-			output: None,
-			inline_output: None,
-			cache_dir: Some(PathBuf::from(".plox/")),
-			panel_alignment_mode: None,
-			time_range: None,
-		};
+		let shared_context = SharedGraphContext::new_with_input(vec![PathBuf::from("input.log")]);
 		propagate_shared_csv_files(config, &shared_context, |_, _| {
 			Ok(PathBuf::from("/some/out/dir"))
 		})

@@ -240,7 +240,7 @@ impl SharedGraphContext {
 		total_range: (NaiveDateTime, NaiveDateTime),
 	) -> Result<PanelAlignmentMode, Error> {
 		if let Some(time_range) = &self.time_range {
-			let resolved = time_range.resolve(total_range, &self.timestamp_format)?;
+			let resolved = time_range.resolve(total_range, &self.timestamp_format())?;
 			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
 		}
 

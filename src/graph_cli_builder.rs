@@ -3,13 +3,14 @@ use clap::{
 	value_parser, Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser,
 	ValueEnum,
 };
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::BTreeMap,
 	num::{ParseFloatError, ParseIntError},
 	path::{Path, PathBuf},
 	str::{FromStr, ParseBoolError},
 };
-use tracing::trace;
+use tracing::{error, trace};
 
 const LOG_TARGET: &str = "graph_cli_builder";
 
@@ -51,6 +52,31 @@ pub enum Error {
 	InvalidLineSource(String),
 	#[error("Missing line data source")]
 	MissingLineDataSource,
+}
+
+/// Helper for deserializing a GraphConfig which may contain extra options from
+/// [`SharedGraphContext`]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct GraphConfigWithContext {
+	#[serde(flatten)]
+	pub config: GraphConfig,
+	#[serde(flatten)]
+	pub context: SharedGraphContext,
+}
+
+impl GraphConfigWithContext {
+	pub fn load_from_file(path: &Path) -> Result<Self, crate::error::Error> {
+		let content = std::fs::read_to_string(path).map_err(|error| {
+			error!(?error, "Reading toml error");
+			crate::error::Error::IoError(format!("{}", path.display()), error)
+		})?;
+		toml::from_str(&content).map_err(|e| {
+			let r = annotate_toml_error(&e, &content, &path.display().to_string());
+			error!("{r}");
+			e.into()
+		})
+	}
 }
 
 impl DataSource {
@@ -828,7 +854,7 @@ for the log line will matched against regex.
 pub fn build_from_matches(
 	matches: &ArgMatches,
 ) -> Result<(GraphConfig, SharedGraphContext), crate::error::Error> {
-	let shared_graph_config = SharedGraphContext::from_arg_matches(&matches).map_err(|e| {
+	let mut shared_graph_config = SharedGraphContext::from_arg_matches(&matches).map_err(|e| {
 		Error::GeneralCliParseError(format!(
 			"SharedGraphContext Instantiation failed. This is bug. {}",
 			e
@@ -836,7 +862,10 @@ pub fn build_from_matches(
 	})?;
 
 	let config = if let Some(config_path) = matches.get_one::<String>("config") {
-		GraphConfig::load_from_file(Path::new(config_path))?
+		let GraphConfigWithContext { config, context } =
+			GraphConfigWithContext::load_from_file(Path::new(config_path))?;
+		shared_graph_config.merge_with_other(context);
+		config
 	} else {
 		GraphConfig::try_from_matches(matches)?
 	};

@@ -1,14 +1,14 @@
 use crate::error::Error;
 use chrono::NaiveDateTime;
 use clap::{Args, Subcommand, ValueEnum};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{
-	fmt::Display,
-	fs,
-	path::{Path, PathBuf},
-	str::FromStr,
+	borrow::Cow, fmt::Display, fs, path::{Path, PathBuf}, str::FromStr
 };
+use strum::EnumIter;
 use tracing::{error, info};
+use annotate_snippets::{Level, Renderer, Snippet};
+use toml::de::Error as TomlError;
 
 ///! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
 
@@ -22,74 +22,57 @@ pub struct GraphConfig {
 	pub panels: Vec<Panel>,
 }
 
-use annotate_snippets::{Level, Renderer, Snippet};
-use toml::de::Error as TomlError;
-
-pub fn annotate_toml_error(err: &TomlError, source: &str, filename: &str) -> String {
-	if let Some(span) = err.span() {
-		let snippet = Snippet::source(source)
-			.line_start(1)
-			.origin(filename)
-			.fold(true)
-			.annotation(Level::Error.span(span.clone()).label(err.message()));
-		let title = format!("Failed to parse {filename}");
-		let message = Level::Error.title(&title).snippet(snippet);
-		format!("{}", Renderer::styled().render(message))
-	} else {
-		err.to_string()
-	}
-}
-
-impl GraphConfig {
-	pub fn save_to_file(self: &GraphConfig, config_path: &Path) -> Result<(), Error> {
-		let toml_string = toml::to_string(self).expect("Failed to convert GraphConfig to TOML");
-		fs::write(config_path, toml_string)
-			.map(|_| info!("Config saved successfully: {:?}.", config_path))
-			.map_err(|e| Error::IoError(format!("{:?}", config_path), e))
-	}
-
-	pub fn load_from_file(path: &Path) -> Result<Self, Error> {
-		let content = fs::read_to_string(path).map_err(|error| {
-			error!(?error, "Reading toml error");
-			Error::IoError(format!("{}", path.display()), error)
-		})?;
-		toml::from_str(&content).map_err(|e| {
-			let r = annotate_toml_error(&e, &content, &path.display().to_string());
-			error!("{r}");
-			e.into()
-		})
-	}
-}
 
 /// The default format of the timestamp which is used in logs.
 ///
 /// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-pub const DEFAULT_TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S%.3f";
+pub const DEFAULT_TIMESTAMP_STR : &str = "%Y-%m-%d %H:%M:%S%.3f";
+pub const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = TimestampFormat::DateTime(Cow::Borrowed(DEFAULT_TIMESTAMP_STR));
+
 
 /// Represents user provided timestamp.
 ///
 /// Shall be compatible with chrono strftime format.
 /// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum TimestampFormat {
 	/// Time stmap format contains date specifier
 	///
 	/// Can be parsed by NaiveDateTime.
-	DateTime(String),
+	DateTime(Cow<'static, str>),
 	/// Time stmap format does not contain any date specifier.
 	///
 	/// Shall be parsed by NativeTime.
-	Time(String),
+	Time(Cow<'static, str>),
+}
+
+impl TimestampFormat {
+    pub fn as_str(&self) -> &str {
+        match self {
+            TimestampFormat::DateTime(cow) => cow.as_ref(),
+            TimestampFormat::Time(cow) => cow.as_ref(),
+        }
+    }
 }
 
 impl From<&str> for TimestampFormat {
 	fn from(s: &str) -> Self {
 		if Self::format_contains_date(&s) {
-			TimestampFormat::DateTime(s.into())
+			TimestampFormat::DateTime(Cow::Owned(s.into()))
 		} else {
-			TimestampFormat::Time(s.into())
+			TimestampFormat::Time(Cow::Owned(s.into()))
 		}
 	}
+}
+
+impl<'de> Deserialize<'de> for TimestampFormat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Self::from(s.as_str()))
+    }
 }
 
 impl TimestampFormat {
@@ -118,11 +101,12 @@ impl TimestampFormat {
 ///
 /// This context is injected when converting from a basic [`GraphConfig`] into a
 /// fully-resolved [`ResolvedGraphConfig`] with concrete log sources.
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Serialize, Deserialize, Default)]
 pub struct SharedGraphContext {
 	/// Input log files to be processed.
 	/// Comma-separated list of input log files to be processed.
 	#[arg(long, short = 'i', value_delimiter = ',', help_heading = "Input files")]
+	#[serde(skip)]
 	pub input: Vec<PathBuf>,
 
 	/// When enabled, creates a separate panel for each input file.
@@ -132,14 +116,20 @@ pub struct SharedGraphContext {
 	/// will contain lines resolved to a specific file from the input list.
 	///
 	/// Panels and lines that already target specific files are unaffected by this option.
-	#[arg(long, default_value_t = false, help_heading = "Panels layout")]
-	pub per_file_panels: bool,
+	#[arg(long, num_args(0..=1), default_value = None, help_heading = "Panels layout",  default_missing_value = "true")]
+	per_file_panels: Option<bool>,
 
 	/// The format of the timestamp which is used in logs.
 	///
 	/// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-	#[arg(long, default_value = DEFAULT_TIMESTAMP_FORMAT, help_heading = "Input files")]
-	pub timestamp_format: TimestampFormat,
+	///
+	/// [default: '%Y-%m-%d %H:%M:%S%.3f']
+	#[arg(
+		long, 
+		default_value = None, 
+		help_heading = "Input files",
+	)]
+	timestamp_format: Option<TimestampFormat>,
 
 	/// Forces regeneration of the CSV cache by re-parsing the log files.
 	#[arg(
@@ -148,6 +138,7 @@ pub struct SharedGraphContext {
 		default_value_t = false,
 		help_heading = "Output files"
 	)]
+	#[serde(skip)]
 	pub force_csv_regen: bool,
 
 	/// Additionally writes the current graph configuration to a file in TOML format.
@@ -178,19 +169,30 @@ pub struct SharedGraphContext {
 	/// be provided here.
 	///
 	/// Overrides `--output` if both are set.
-	#[arg(long, value_name = "FILE", value_parser = validate_standalone_filename, help_heading = "Output files")]
+	#[arg(
+		long, 
+		value_name = "FILE", 
+		value_parser = validate_standalone_filename, 
+		help_heading = "Output files"
+	)]
 	pub inline_output: Option<PathBuf>,
 
 	/// Directory to store parsed CSV cache files.
 	/// The full path of each log file is mirrored inside this directory to avoid name collisions.
 	/// If not set, a `.plox/` directory is created next to each log file to store its cache.
 	#[arg(long, value_name = "DIR", help_heading = "Output files")]
+	#[serde(skip)]
 	pub cache_dir: Option<PathBuf>,
 
 	/// Strategy for aligning time ranges across all panels.
 	///
 	/// This determines how time-axis (x) ranges are handled when plotting.
-	#[clap(long, value_enum, conflicts_with = "time_range", help_heading = "Panels layout")]
+	#[arg(
+		long, 
+		value_enum, 
+		conflicts_with = "time_range", 
+		help_heading = "Panels layout"
+	)]
 	pub panel_alignment_mode: Option<PanelAlignmentModeArg>,
 
 	/// Optional override for the global time range used in the graph.
@@ -202,8 +204,55 @@ pub struct SharedGraphContext {
 	/// Timestamp strings must be compatible with the `--timestamp-format`.
 	///
 	/// Conflicts with `--panel-alignment-mode`, and implies global alignment.
-	#[clap(long = "time_range", value_parser = TimeRangeArg::parse_time_range, conflicts_with = "panel_alignment_mode", help_heading = "Panels layout")]
+	#[arg(
+		long = "time_range", 
+		value_parser = TimeRangeArg::parse_time_range, 
+		conflicts_with = "panel_alignment_mode", 
+		help_heading = "Panels layout"
+	)]
+	#[serde(skip)]
 	pub time_range: Option<TimeRangeArg>,
+}
+
+impl SharedGraphContext {
+
+	pub fn new_with_input(
+		input: Vec<PathBuf>
+	) -> Self{
+		Self {
+			input,
+			..Default::default()
+		}
+	}
+
+	pub fn timestamp_format(&self) -> &TimestampFormat {
+		self.timestamp_format.as_ref().unwrap_or(&DEFAULT_TIMESTAMP_FORMAT)
+	}
+
+	#[cfg(test)]
+	pub fn per_file_panels_option(&self) -> Option<bool> {
+		self.per_file_panels
+	}
+
+	pub fn per_file_panels(&self) -> bool {
+		self.per_file_panels.unwrap_or(false)
+	}
+
+	/// Intended to merge context given on CLI with one read from file
+	pub fn merge_with_other(&mut self, other: Self) {
+		macro_rules! set_if_none {
+		    ($field:ident) => {
+				if self.$field.is_none() {
+					self.$field = other.$field;
+				}
+		    };
+		}
+		
+		set_if_none!(per_file_panels);
+		set_if_none!(timestamp_format);
+	}
+
+
 }
 
 /// A panel that holds multiple [`Line`]s in the same horizontal space.
@@ -461,22 +510,18 @@ pub enum YAxis {
 }
 
 /// Predefined set of colors for gnuplot lines and markers.
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 pub enum Color {
 	Red,
 	Blue,
-	Green,
-	Orange,
+	DarkGreen,
 	Purple,
 	Cyan,
-	Magenta,
 	Goldenrod,
 	Brown,
 	Olive,
 	Navy,
-	DarkGreen,
-	DarkOrange,
 	Violet,
 	Coral,
 	Salmon,
@@ -487,23 +532,27 @@ pub enum Color {
 	DarkTurquoise,
 	Yellow,
 	Black,
+	Magenta,
+	Orange,
+	Green,
+	DarkOrange,
 }
 
 /// Predefined marker symbols for gnuplot plots.
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 pub enum MarkerType {
 	Dot,
+	TriangleFilled,
+	SquareFilled,
+	DiamondFilled,
 	Plus,
 	Cross,
 	Circle,
 	X,
 	Triangle,
-	TriangleFilled,
 	Square,
-	SquareFilled,
 	Diamond,
-	DiamondFilled,
 }
 
 impl FromStr for MarkerType {
@@ -515,7 +564,7 @@ impl FromStr for MarkerType {
 }
 
 /// Plot styles for gnuplot
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, Default)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, Default, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 pub enum PlotStyle {
 	#[default]
@@ -534,7 +583,7 @@ impl FromStr for PlotStyle {
 }
 
 /// Dash (line-type) styles for gnuplot
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, Default)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Deserialize, Serialize, Default, EnumIter)]
 #[serde(rename_all = "kebab-case")]
 pub enum DashStyle {
 	#[default]
@@ -631,7 +680,7 @@ pub enum PanelAlignmentMode {
 }
 
 /// Clap wrapper for [`PanelAlignmentMode`]
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Default)]
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub enum PanelAlignmentModeArg {
 	#[default]
 	PerPanel,
@@ -643,7 +692,7 @@ pub enum PanelAlignmentModeArg {
 ///
 /// This can be used to zoom in or constrain the graph to a specific time window.
 /// The variant determines how to interpret the input:
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TimeRangeArg {
 	/// Relative zoom: values between 0.0 and 1.0
 	Relative(f64, f64),
@@ -669,3 +718,40 @@ impl TimeRangeArg {
 		Ok(TimeRangeArg::AbsoluteDateTime(pieces[0].into(), pieces[1].into()))
 	}
 }
+
+impl GraphConfig {
+	pub fn save_to_file(self: &GraphConfig, config_path: &Path) -> Result<(), Error> {
+		let toml_string = toml::to_string(self).expect("Failed to convert GraphConfig to TOML");
+		fs::write(config_path, toml_string)
+			.map(|_| info!("Config saved successfully: {:?}.", config_path))
+			.map_err(|e| Error::IoError(format!("{:?}", config_path), e))
+	}
+
+	pub fn load_from_file(path: &Path) -> Result<Self, Error> {
+		let content = fs::read_to_string(path).map_err(|error| {
+			error!(?error, "Reading toml error");
+			Error::IoError(format!("{}", path.display()), error)
+		})?;
+		toml::from_str(&content).map_err(|e| {
+			let r = annotate_toml_error(&e, &content, &path.display().to_string());
+			error!("{r}");
+			e.into()
+		})
+	}
+}
+
+pub fn annotate_toml_error(err: &TomlError, source: &str, filename: &str) -> String {
+	if let Some(span) = err.span() {
+		let snippet = Snippet::source(source)
+			.line_start(1)
+			.origin(filename)
+			.fold(true)
+			.annotation(Level::Error.span(span.clone()).label(err.message()));
+		let title = format!("Failed to parse {filename}");
+		let message = Level::Error.title(&title).snippet(snippet);
+		format!("{}", Renderer::styled().render(message))
+	} else {
+		err.to_string()
+	}
+}
+
