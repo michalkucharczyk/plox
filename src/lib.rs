@@ -1,3 +1,5 @@
+#![doc = include_str!("../SAMPLE.md")]
+
 pub mod align_ranges;
 pub mod cli;
 pub mod error;
