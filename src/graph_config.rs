@@ -95,9 +95,9 @@ impl From<&str> for TimestampFormat {
 impl TimestampFormat {
 	fn format_contains_date(fmt: &str) -> bool {
 		//https://docs.rs/chrono/latest/chrono/format/strftime/index.html
-		const DATE_SPECIFIERS: [&str; 24] = [
+		const DATE_SPECIFIERS: [&str; 25] = [
 			"%Y", "%C", "%y", "%q", "%m", "%b", "%B", "%h", "%d", "%e", "%a", "%A", "%w", "%u",
-			"%U", "%W", "%G", "%g", "%V", "%j", "%D", "%x", "%F", "%v",
+			"%U", "%W", "%G", "%g", "%V", "%j", "%D", "%x", "%F", "%v", "%s",
 		];
 		DATE_SPECIFIERS.iter().any(|&s| fmt.contains(s))
 	}
@@ -636,7 +636,7 @@ pub enum PanelAlignmentModeArg {
 	#[default]
 	PerPanel,
 	SharedOverlap,
-	Fixed,
+	SharedFull,
 }
 
 /// Represents a user-defined time range override provided via `--time-range`.
