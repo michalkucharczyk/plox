@@ -19,7 +19,8 @@ fn rewrite_img_src(input: &str) -> String {
 }
 
 fn strip_bash_macro(input: &str) -> String {
-	let re = regex::Regex::new(r#"bash!\(\s*((?:.|\n)*?)\s*\)"#).unwrap();
+	let re = regex::Regex::new(r"(?ms)^\s*bash!\(\s*(.*?)\s*\)\s*$").unwrap();
+	let strip_raw_string = regex::Regex::new("r#\\\"(.*?)\\\"#").unwrap();
 	re.replace_all(input, |caps: &regex::Captures| {
 		let content = &caps[1];
 
@@ -31,7 +32,9 @@ fn strip_bash_macro(input: &str) -> String {
 			let mut out = String::new();
 			for (i, line) in lines.iter().enumerate() {
 				let trimmed = line.trim_end();
-				out.push_str(trimmed);
+				let lx = strip_raw_string.replace_all(trimmed, r#""$1""#);
+
+				out.push_str(&lx);
 				if i + 1 != lines.len() {
 					out.push_str(" \\");
 				}

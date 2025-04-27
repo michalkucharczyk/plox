@@ -149,9 +149,8 @@ pub fn write_gnuplot_script(
 	let mut file = File::create(output_script_path)
 		.map_err(|e| Error::ScriptCreationError(output_script_path.clone(), e))?;
 	let num_non_empty_panels = config.panels.iter().filter(|p| !p.is_empty()).count();
-	let plot_height = 1.0 / num_non_empty_panels as f64 - 0.005;
-	let margin = 0.005;
-	let _height = plot_height + margin;
+	let plot_margin = 0.005;
+	let plot_height = 1.0 / num_non_empty_panels as f64 - plot_margin;
 
 	let has_multiple_input_files = context.input.len() > 1;
 
@@ -187,7 +186,7 @@ pub fn write_gnuplot_script(
 	gpwr!(file, "combine_datetime(date_col,time_col) = strcol(date_col) . 'T' . strcol(time_col)")?;
 
 	let mut i = 0;
-	for panel in config.panels.iter() {
+	for panel in config.panels.iter().rev() {
 		debug!(target:LOG_TARGET,"drawing: {:#?}",panel);
 		if panel.is_empty() {
 			continue;

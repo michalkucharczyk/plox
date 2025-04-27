@@ -55,7 +55,7 @@ impl ResolvedPanel {
 	}
 
 	pub fn is_empty(&self) -> bool {
-		self.lines.is_empty() || self.lines.iter().all(|line| line.data_points_count == 0)
+		self.lines.is_empty() || self.lines.iter().all(ResolvedLine::is_empty)
 	}
 
 	pub fn input_file(&self) -> &Option<PathBuf> {
@@ -122,6 +122,10 @@ pub struct ResolvedLine {
 }
 
 impl ResolvedLine {
+	pub fn is_empty(&self) -> bool {
+		self.data_points_count == 0
+	}
+
 	pub fn from_explicit_name(line: Line, file_name: PathBuf) -> Self {
 		Self {
 			line,

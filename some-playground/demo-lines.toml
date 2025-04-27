@@ -1,143 +1,146 @@
 timestamp_format = "[%s]"
 
 [[panels]]
+panel_title="Steps"
 
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x00"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x01"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x02"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x03"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x04"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x05"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x06"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x07"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x08"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x09"
 style = "steps"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x10"
 style = "steps"
 
 
 [[panels]]
+panel_title="Lines-points"
 
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x00"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x01"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x02"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x03"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x04"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x05"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x06"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x07"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x08"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x09"
 style = "lines-points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x10"
 style = "lines-points"
 
 [[panels]]
+panelt_title="Points"
 
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x00"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x01"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x02"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x03"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x04"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x05"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x06"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x07"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x08"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x09"
 style = "points"
 [[panels.lines]]
-guard = "linear"
+guard = "x_module"
 field = "x10"
 style = "points"

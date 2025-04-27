@@ -4,12 +4,14 @@ use cmd_lib::spawn_with_output;
 macro_rules! bash(
 	( plox $($a:tt)* ) => {{
 		let bin_path = env!("CARGO_BIN_EXE_plox");
-		spawn_with_output!(
-			$bin_path $($a)*
+		let output = spawn_with_output!(
+			$bin_path -vv $($a)*
 		)
 		.expect("a process running. qed")
-		.wait_with_output()
-		.expect("to get output. qed.")
+		.wait_with_output();
+
+		// tracing::error!("output: {:#?}", output);
+		output.unwrap()
 	}}
 );
 
@@ -19,7 +21,7 @@ fn cmd_simple() -> String {
 		plox graph
 		  --input  some-playground/default.log
 		  --output some-playground/default.png
-		  --plot down x
+		  --plot om_module x
 	)
 }
 
@@ -30,14 +32,14 @@ fn cmd_simple_panels() -> String {
 		  --input  some-playground/some.log
 		  --output some-playground/panels.png
 		  --timestamp-format "[%s]"
-		  --plot down x
+		  --plot om_module x
 		  --panel
-		  --plot linear x01
-		  --plot linear x02
-		  --plot linear x03
+		  --plot x_module x01
+		  --plot x_module x02
+		  --plot x_module x03
 		  --panel
-		  --event-count event SOME_EVENT
-		  --event event SOME_EVENT 1.0 --yaxis y2 --style points
+		  --event-count foo_module SOME_EVENT
+		  --event foo_module SOME_EVENT 1.0 --yaxis y2 --style points
 	)
 }
 
@@ -50,10 +52,60 @@ fn cmd_demo_lines() -> String {
 		  --config some-playground/demo-lines.toml
 	)
 }
+#[docify::export_content]
+fn cmd_regex() -> String {
+	bash!(
+		plox graph
+		  --input  some-playground/default.log
+		  --output some-playground/regex.png
+		  --plot yam_module r#"y=\([\d\.]+,\s*([\d\.]+)\)"#
+		  --title "1st tuple item"
+		  --plot yam_module r#"y=\(([\d\.]+),\s*[\d\.]+\)"#
+		  --title "2nd tuple item"
+	)
+}
 
-#[test]
-fn test_cmd_simple_panels() {
-	cmd_simple_panels();
+#[docify::export_content]
+fn cmd_deltas_and_count() -> String {
+	bash!(
+		plox graph
+		  --input some-playground/default.log
+		  --output some-playground/deltas.png
+		  --event-delta foo_module "SOME_EVENT" --yaxis-scale log
+		  --style points --marker-size 7 --marker-color olive --marker-type diamond
+		  --event-count foo_module "SOME_EVENT" --style steps --yaxis y2
+	)
+}
+
+#[docify::export_content]
+fn cmd_simple_panels_two_files() -> String {
+	bash!(
+		plox graph
+		  --input  some-playground/default.log,some-playground/default-other.log
+		  --output some-playground/panels-two-files.png
+		  --per-file-panels
+		  --plot om_module x
+		  --panel
+		  --plot x_module x01
+		  --plot x_module x02
+		  --plot x_module x03
+		  --panel
+		  --event-count foo_module SOME_EVENT
+		  --event foo_module SOME_EVENT 1.0 --yaxis y2 --style points
+	)
+}
+
+#[docify::export_content]
+fn cmd_demo_lines_two_files() -> String {
+	bash!(
+		plox graph
+		  --input  some-playground/default.log
+		  --input  some-playground/default-other.log
+		  --output some-playground/demo-lines-two-files.png
+		  --timestamp-format "%Y-%m-%d %H:%M:%S%.3f"
+		  --per-file-panels
+		  --config some-playground/demo-lines.toml
+	)
 }
 
 #[test]
@@ -62,6 +114,32 @@ fn test_cmd_simple() {
 }
 
 #[test]
+fn test_cmd_regex() {
+	cmd_regex();
+}
+
+#[test]
+fn test_cmd_deltas_and_count() {
+	// plox::logging::init_tracing(false, 2);
+	cmd_deltas_and_count();
+}
+
+#[test]
+fn test_cmd_simple_panels() {
+	cmd_simple_panels();
+}
+
+#[test]
 fn test_cmd_demo_lines() {
 	cmd_demo_lines();
+}
+
+#[test]
+fn test_cmd_simple_panels_two_files() {
+	cmd_simple_panels_two_files();
+}
+
+#[test]
+fn test_cmd_demo_lines_two_files() {
+	cmd_demo_lines_two_files();
 }
