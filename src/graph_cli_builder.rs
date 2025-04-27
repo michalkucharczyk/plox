@@ -16,42 +16,28 @@ const LOG_TARGET: &str = "graph_cli_builder";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("Error while parsing y value for `event` line: {0}")]
-	EventLineYValueParseError(ParseFloatError),
-	#[error("Error while parsing file-id for line: {0}")]
-	LineFileIdParseError(ParseIntError),
-	#[error("Error while parsing width for line: {0}")]
-	LineWidthParseError(String),
-	#[error("Error while parsing marker size for line: {0}")]
-	MarkerSizeParseError(String),
-	#[error("Color parse error: {0}")]
-	ColorParseError(String),
-	#[error("Plot style parse error: {0}")]
-	PlotStyleParseError(String),
-	#[error("Dash style parse error: {0}")]
-	DashStyleParseError(String),
-	#[error("Marker type parse: {0}")]
-	MarkerTypeParseError(String),
-	#[error("Line axis parse: {0}")]
-	YAxisParseError(String),
+	#[error("Parse int error: {0}")]
+	ParseIntError(#[from] ParseIntError),
+	#[error("Parse int error: {0}")]
+	ParseBoolError(#[from] ParseBoolError),
+	#[error("Parse float error: {0}")]
+	ParseFloatError(#[from] ParseFloatError),
 	#[error("CLI parsing error: {0}")]
 	GeneralCliParseError(String),
-	#[error("Unknown line param {0:?}")]
-	UnknownLineParam(String),
-	#[error("Error while parsing height of panel: {0}")]
-	PanelHeightParseError(ParseFloatError),
-	#[error("Error while parsing Y axis type for panel: {0}")]
-	YAxisScaleParseError(String),
-	#[error("Error while parsing panel time range mode: {0}")]
-	TimeRangeModeParseError(String),
-	#[error("Error while parsing legend for panel: {0}")]
-	LegendParseError(#[from] ParseBoolError),
 	#[error("Unknown panel param {0:?}")]
 	UnknownPanelParam(String),
 	#[error("Invalid line source {0:?}")]
 	InvalidLineSource(String),
 	#[error("Missing line data source")]
 	MissingLineDataSource,
+	#[error("Unknown line param {0:?}")]
+	UnknownLineParam(String),
+}
+
+impl From<String> for Error {
+	fn from(error: String) -> Self {
+		Error::GeneralCliParseError(error)
+	}
 }
 
 /// Helper for deserializing a GraphConfig which may contain extra options from
@@ -108,16 +94,12 @@ impl DataSource {
 				2 => DataSource::EventValue {
 					guard: None,
 					pattern: val[0].to_string(),
-					yvalue: val[1]
-						.parse::<f64>()
-						.map_err(|e| Error::EventLineYValueParseError(e))?,
+					yvalue: val[1].parse::<f64>()?,
 				},
 				3 => DataSource::EventValue {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
-					yvalue: val[2]
-						.parse::<f64>()
-						.map_err(|e| Error::EventLineYValueParseError(e))?,
+					yvalue: val[2].parse::<f64>()?,
 				},
 				_ =>
 					return Err(Error::GeneralCliParseError(format!(
@@ -181,36 +163,9 @@ impl DataSource {
 /// styling or configuration parameters (e.g. color, axis) via [`LineParams`].
 #[derive(Debug, Default)]
 pub struct LineBuilder {
-	/// Marker size
-	marker_size: MarkerSize,
-
-	/// Plot style
-	style: PlotStyle,
-
 	/// Optional core data source for the line.
 	line: Option<DataSource>,
-
-	/// The chosen Y-axis.
-	yaxis: Option<YAxis>,
-
-	/// Optional line color.
-	line_color: Option<Color>,
-
-	/// Optional marker type.
-	marker_type: Option<MarkerType>,
-
-	/// Optional marker color.
-	marker_color: Option<Color>,
-
-	/// Optional input file name override.
-	file_name: Option<PathBuf>,
-
-	/// Optional input file id override.
-	file_id: Option<usize>,
-
-	dash_style: Option<DashStyle>,
-	line_width: Option<LineWidth>,
-	title: Option<String>,
+	params: LineParams,
 }
 
 impl LineBuilder {
@@ -233,17 +188,17 @@ impl LineBuilder {
 	/// is duplicated, the last call wins.
 	fn apply_param(mut self, param: LineParam) -> Self {
 		match param {
-			LineParam::LineColor(c) => self.line_color = Some(c),
-			LineParam::YAxis(y) => self.yaxis = Some(y),
-			LineParam::MarkerType(mt) => self.marker_type = Some(mt),
-			LineParam::MarkerColor(mc) => self.marker_color = Some(mc),
-			LineParam::InputFileName(name) => self.file_name = Some(name),
-			LineParam::InputFileId(id) => self.file_id = Some(id),
-			LineParam::PlotStyle(style) => self.style = style,
-			LineParam::LineWidth(w) => self.line_width = Some(w),
-			LineParam::MarkerSize(w) => self.marker_size = w,
-			LineParam::DashStyle(s) => self.dash_style = Some(s),
-			LineParam::Title(s) => self.title = Some(s),
+			LineParam::LineColor(c) => self.params.line_color = Some(c),
+			LineParam::YAxis(y) => self.params.yaxis = Some(y),
+			LineParam::MarkerType(mt) => self.params.marker_type = Some(mt),
+			LineParam::MarkerColor(mc) => self.params.marker_color = Some(mc),
+			LineParam::InputFileName(name) => self.params.file_name = Some(name),
+			LineParam::InputFileId(id) => self.params.file_id = Some(id),
+			LineParam::PlotStyle(style) => self.params.style = style,
+			LineParam::LineWidth(w) => self.params.line_width = Some(w),
+			LineParam::MarkerSize(w) => self.params.marker_size = w,
+			LineParam::DashStyle(s) => self.params.dash_style = Some(s),
+			LineParam::Title(s) => self.params.title = Some(s),
 		}
 		self
 	}
@@ -252,29 +207,16 @@ impl LineBuilder {
 	///
 	/// Returns [`None`] if no [`DataSource`] was specified.
 	fn build(self) -> Result<Line, Error> {
-		if self.file_name.is_some() && self.file_id.is_some() {
+		if self.params.file_name.is_some() && self.params.file_id.is_some() {
 			return Err(Error::InvalidLineSource(format!(
 				"file-name {} and file-id {} cannot be used together.",
-				self.file_name.unwrap().display(),
-				self.file_id.unwrap()
+				self.params.file_name.unwrap().display(),
+				self.params.file_id.unwrap()
 			)));
 		}
-		self.line.ok_or(Error::MissingLineDataSource).map(|data_source| Line {
-			data_source,
-			params: LineParams {
-				yaxis: self.yaxis,
-				line_color: self.line_color,
-				marker_type: self.marker_type,
-				marker_color: self.marker_color,
-				file_name: self.file_name,
-				file_id: self.file_id,
-				line_width: self.line_width,
-				marker_size: self.marker_size,
-				dash_style: self.dash_style,
-				style: self.style,
-				title: self.title,
-			},
-		})
+		self.line
+			.ok_or(Error::MissingLineDataSource)
+			.map(|data_source| Line { data_source, params: self.params })
 	}
 }
 
@@ -283,21 +225,8 @@ impl LineBuilder {
 /// This builder allows to specify configuration parameters via applying [`PanelParams`].
 #[derive(Debug, Default)]
 pub struct PanelBuilder {
-	/// Title for the panel.
-	panel_title: Option<String>,
-
-	/// Height ratio of the panel.
-	height: Option<f64>,
-
-	/// Scale type for the panel's Y-axis.
-	yaxis_scale: Option<AxisScale>,
-
-	/// Whether to show a legend in the panel.
-	legend: Option<bool>,
-
 	lines: Vec<Line>,
-
-	time_range_mode: Option<PanelRangeMode>,
+	params: PanelParams,
 }
 
 impl PanelBuilder {
@@ -312,11 +241,11 @@ impl PanelBuilder {
 	/// is defined multiple times, the last value takes precedence.
 	fn apply_param(mut self, param: PanelParam) -> Self {
 		match param {
-			PanelParam::PanelTitle(t) => self.panel_title = Some(t),
-			PanelParam::Height(h) => self.height = Some(h),
-			PanelParam::YAxisScale(ys) => self.yaxis_scale = Some(ys),
-			PanelParam::Legend(l) => self.legend = Some(l),
-			PanelParam::TimeRangeMode(r) => self.time_range_mode = Some(r),
+			PanelParam::PanelTitle(t) => self.params.panel_title = Some(t),
+			PanelParam::Height(h) => self.params.height = Some(h),
+			PanelParam::YAxisScale(ys) => self.params.yaxis_scale = Some(ys),
+			PanelParam::Legend(l) => self.params.legend = Some(l),
+			PanelParam::TimeRangeMode(r) => self.params.time_range_mode = Some(r),
 		}
 		self
 	}
@@ -329,16 +258,7 @@ impl PanelBuilder {
 
 	/// Finalize and return the constructed [`Panel`].
 	fn build(self) -> Panel {
-		Panel {
-			lines: self.lines,
-			params: PanelParams {
-				panel_title: self.panel_title,
-				height: self.height,
-				yaxis_scale: self.yaxis_scale,
-				legend: self.legend,
-				time_range_mode: self.time_range_mode,
-			},
-		}
+		Panel { lines: self.lines, params: self.params }
 	}
 }
 
@@ -394,43 +314,20 @@ enum LineParam {
 
 impl LineParam {
 	fn from_flag(flag: &str, val: &[String]) -> Result<Self, Error> {
-		match flag {
-			"title" => Ok(Self::Title(val[0].clone())),
-			"file_name" => Ok(Self::InputFileName(PathBuf::from(&val[0]))),
-			"file_id" => Ok(Self::InputFileId(
-				val[0].parse::<usize>().map_err(|e| Error::LineFileIdParseError(e))?,
-			)),
-			"style" => Ok(Self::PlotStyle(
-				<PlotStyle as ValueEnum>::from_str(&val[0], false)
-					.map_err(|e| Error::PlotStyleParseError(e))?,
-			)),
-			"line_width" => Ok(Self::LineWidth(
-				LineWidth::from_str(&val[0]).map_err(|e| Error::LineWidthParseError(e))?,
-			)),
-			"line_color" => Ok(Self::LineColor(
-				<Color as ValueEnum>::from_str(&val[0], false)
-					.map_err(|e| Error::ColorParseError(e))?,
-			)),
-			"dash_style" => Ok(Self::DashStyle(
-				<DashStyle as ValueEnum>::from_str(&val[0], false)
-					.map_err(|e| Error::DashStyleParseError(e))?,
-			)),
-			"yaxis" => Ok(Self::YAxis(
-				YAxis::from_str(&val[0], false).map_err(|e| Error::YAxisParseError(e))?,
-			)),
-			"marker_type" => Ok(Self::MarkerType(
-				<MarkerType as ValueEnum>::from_str(&val[0], false)
-					.map_err(|e| Error::MarkerTypeParseError(e))?,
-			)),
-			"marker_color" => Ok(Self::MarkerColor(
-				<Color as ValueEnum>::from_str(&val[0], false)
-					.map_err(|e| Error::ColorParseError(e))?,
-			)),
-			"marker_size" => Ok(Self::MarkerSize(
-				MarkerSize::from_str(&val[0]).map_err(|e| Error::MarkerSizeParseError(e))?,
-			)),
-			_ => Err(Error::UnknownLineParam(flag.to_string())),
-		}
+		Ok(match flag {
+			"title" => Self::Title(val[0].clone()),
+			"file_name" => Self::InputFileName(PathBuf::from(&val[0])),
+			"file_id" => Self::InputFileId(val[0].parse::<usize>()?),
+			"style" => Self::PlotStyle(<PlotStyle as ValueEnum>::from_str(&val[0], false)?),
+			"line_width" => Self::LineWidth(LineWidth::from_str(&val[0])?),
+			"line_color" => Self::LineColor(<Color as ValueEnum>::from_str(&val[0], false)?),
+			"dash_style" => Self::DashStyle(<DashStyle as ValueEnum>::from_str(&val[0], false)?),
+			"yaxis" => Self::YAxis(YAxis::from_str(&val[0], false)?),
+			"marker_type" => Self::MarkerType(<MarkerType as ValueEnum>::from_str(&val[0], false)?),
+			"marker_color" => Self::MarkerColor(<Color as ValueEnum>::from_str(&val[0], false)?),
+			"marker_size" => Self::MarkerSize(MarkerSize::from_str(&val[0])?),
+			_ => Err(Error::UnknownLineParam(flag.to_string()))?,
+		})
 	}
 }
 
@@ -454,22 +351,14 @@ enum PanelParam {
 
 impl PanelParam {
 	fn from_flag(flag: &str, val: &[String]) -> Result<Self, Error> {
-		match flag {
-			"panel_title" => Ok(Self::PanelTitle(val[0].to_string())),
-			"height" => Ok(Self::Height(
-				val[0].parse::<f64>().map_err(|e| Error::PanelHeightParseError(e))?,
-			)),
-			"yaxis_scale" => Ok(Self::YAxisScale(
-				AxisScale::from_str(&val[0], false).map_err(|e| Error::YAxisScaleParseError(e))?,
-			)),
-			"legend" =>
-				Ok(Self::Legend(val[0].parse::<bool>().map_err(|e| Error::LegendParseError(e))?)),
-			"time_range_mode" => Ok(Self::TimeRangeMode(
-				PanelRangeMode::from_str(&val[0], false)
-					.map_err(|e| Error::TimeRangeModeParseError(e))?,
-			)),
-			_ => Err(Error::UnknownPanelParam(flag.to_string())),
-		}
+		Ok(match flag {
+			"panel_title" => Self::PanelTitle(val[0].to_string()),
+			"height" => Self::Height(val[0].parse::<f64>()?),
+			"yaxis_scale" => Self::YAxisScale(AxisScale::from_str(&val[0], false)?),
+			"legend" => Self::Legend(val[0].parse::<bool>()?),
+			"time_range_mode" => Self::TimeRangeMode(PanelRangeMode::from_str(&val[0], false)?),
+			_ => Err(Error::UnknownPanelParam(flag.to_string()))?,
+		})
 	}
 }
 
