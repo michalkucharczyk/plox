@@ -17,6 +17,8 @@ Sample matching line:
 
 <img src="some-playground/default.png" width="800" />
 
+---
+
 ### Extracting Value Using Regex.
 
 <!-- docify::embed!("tests/cmd_tests.rs", cmd_regex) -->
@@ -32,6 +34,8 @@ Sample matching line:
 ```
 
 <img src="some-playground/regex.png" width="800" />
+
+---
 
 ### Events Count and Time Differences
 
@@ -51,6 +55,7 @@ Sample matching line:
 
 <img src="some-playground/deltas.png" width="800" />
 
+---
 
 ### Adding More Panels.
 
@@ -67,6 +72,8 @@ Sample matching lines:
 ```
 
 <img src="some-playground/panels.png" width="800" />
+
+---
 
 ### 🧩 Comparing Multiple Logs Side-by-Side
 
@@ -86,6 +93,7 @@ Similarly, a graph config file can be re-used with many log files:
 
 <img src="some-playground/demo-lines-two-files.png" width="800" />
 
+---
 
 ### Using a Toml Graph Config.
 

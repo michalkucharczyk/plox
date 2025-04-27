@@ -23,6 +23,8 @@ Sample matching line:
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/default.png" width="800" />
 
+---
+
 ### Extracting Value Using Regex.
 
 ```rust,ignore
@@ -47,6 +49,8 @@ Sample matching line:
 ```
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/regex.png" width="800" />
+
+---
 
 ### Events Count and Time Differences
 
@@ -74,6 +78,7 @@ Sample matching line:
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/deltas.png" width="800" />
 
+---
 
 ### Adding More Panels.
 
@@ -104,6 +109,8 @@ Sample matching lines:
 ```
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/panels.png" width="800" />
+
+---
 
 ### 🧩 Comparing Multiple Logs Side-by-Side
 
@@ -146,6 +153,7 @@ plox graph \
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines-two-files.png" width="800" />
 
+---
 
 ### Using a Toml Graph Config.
 
