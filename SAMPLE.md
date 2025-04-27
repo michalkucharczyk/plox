@@ -21,7 +21,7 @@ Sample matching line:
 2020-01-01 00:14:59.000 om_module x=100.10
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/default.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/default.png" width="800" />
 
 ### Extracting Value Using Regex.
 
@@ -37,7 +37,7 @@ plox graph \
 ```
 
 Plot a regex extracted numeric values:
-- Extracts the numeric values using regex 
+- Extracts the numeric values using regex
 - only lines containing `yam_module` are matched against regex
 - Outputs a simple time-series graph containing two lines each corresponding to extracted values
 
@@ -46,7 +46,7 @@ Sample matching line:
 2020-01-01 00:14:52.000 yam_module y=(107.107107,892.892893)
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/regex.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/regex.png" width="800" />
 
 ### Events Count and Time Differences
 
@@ -72,7 +72,7 @@ Sample matching line:
 2020-01-01 00:16:33.000 foo_module bla bla "SOME_EVENT"
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/deltas.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/deltas.png" width="800" />
 
 
 ### Adding More Panels.
@@ -103,7 +103,7 @@ Sample matching lines:
 [1577834174] om_module x=25.03
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/panels.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/panels.png" width="800" />
 
 ### 🧩 Comparing Multiple Logs Side-by-Side
 
@@ -112,7 +112,7 @@ One of `plox`'s most powerful features is the ability to **compare multiple log 
 ```rust,ignore
 plox graph \
 	  --input  some-playground/default.log,some-playground/default-other.log \
-	  --output some-playground/panels-2-files.png \
+	  --output some-playground/panels-two-files.png \
 	  --per-file-panels \
 	  --plot om_module x \
 	  --panel \
@@ -130,7 +130,7 @@ This command:
 - Two log files (`default.log` and `default-other.log`) are provided as input
 - `--per-file-panels` automatically duplicates the panel layout once per input file
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/panels-2-files.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/panels-two-files.png" width="800" />
 
 Similarly, a graph config file can be re-used with many log files:
 ```rust,ignore
@@ -144,7 +144,7 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/demo-lines-two-files.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines-two-files.png" width="800" />
 
 
 ### Using a Toml Graph Config.
@@ -159,5 +159,5 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/demo-lines.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines.png" width="800" />
 

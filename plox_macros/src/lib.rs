@@ -10,7 +10,7 @@ fn rewrite_img_src(input: &str) -> String {
 		let local_path = &caps[1];
 		let remote_path = local_path.replacen(
 			"some-playground/",
-			"https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/",
+			"https://github.com/michalkucharczyk/plox/blob/master/some-playground/",
 			1,
 		);
 		caps[0].replace(local_path, &remote_path)
