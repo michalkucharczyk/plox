@@ -10,7 +10,7 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/default.png" width="800" />
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/default.png" width="800" />
 
 ### Adding more panels.
 
@@ -33,7 +33,7 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/panels.png" width="800" />
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/panels.png" width="800" />
 
 ### Using a toml graph config.
 
@@ -47,5 +47,5 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/demo-lines.png" width="800" />
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/demo-lines.png" width="800" />
 
