@@ -25,7 +25,7 @@ pub struct GraphConfig {
 
 /// The default format of the timestamp which is used in logs.
 ///
-/// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+/// For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
 pub const DEFAULT_TIMESTAMP_STR : &str = "%Y-%m-%d %H:%M:%S%.3f";
 pub const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = TimestampFormat::DateTime(Cow::Borrowed(DEFAULT_TIMESTAMP_STR));
 
@@ -33,7 +33,7 @@ pub const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = TimestampFormat::DateTime(
 /// Represents user provided timestamp.
 ///
 /// Shall be compatible with chrono strftime format.
-/// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+/// For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
 #[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum TimestampFormat {
 	/// Time stmap format contains date specifier
@@ -100,7 +100,7 @@ impl TimestampFormat {
 ///     panels.
 ///
 /// This context is injected when converting from a basic [`GraphConfig`] into a
-/// fully-resolved [`ResolvedGraphConfig`] with concrete log sources.
+/// fully-resolved [`crate::resolved_graph_config::ResolvedGraphConfig`] with concrete log sources.
 #[derive(Args, Debug, Serialize, Deserialize, Default)]
 pub struct SharedGraphContext {
 	/// Input log files to be processed.
@@ -121,7 +121,7 @@ pub struct SharedGraphContext {
 
 	/// The format of the timestamp which is used in logs.
 	///
-	/// For exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+	/// For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
 	///
 	/// [default: '%Y-%m-%d %H:%M:%S%.3f']
 	#[arg(
@@ -428,11 +428,6 @@ pub enum AxisScale {
 }
 
 /// Represents the different ways a line's data can be sourced from logs.
-///
-/// - [`FieldValue`]: parse a numeric field from matching log lines.
-/// - [`EventValue`]: plot a fixed y-value whenever a pattern occurs.
-/// - [`EventCount`]: plot a cumulative count of pattern occurrences over time.
-/// - [`EventDelta`]: plot the time delta between consecutive occurrences of a pattern.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Subcommand)]
 #[serde(tag = "data_source", rename_all = "snake_case")]
 pub enum DataSource {

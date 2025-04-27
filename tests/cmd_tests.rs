@@ -16,11 +16,26 @@ macro_rules! bash(
 #[docify::export_content]
 fn cmd_simple() -> String {
 	bash!(
-		plox graph --input some-playground/default.log --plot down x -o some-playground/default.png
+		plox graph
+		  --input  some-playground/default.log
+		  --output some-playground/default.png
+		  --plot down x
+	)
+}
+
+#[docify::export_content]
+fn cmd_demo_lines() -> String {
+	bash!(
+		plox graph  --input some-playground/some.log --config some-playground/demo-lines.toml -o some-playground/demo-lines.png
 	)
 }
 
 #[test]
 fn test_cmd_simple() {
 	cmd_simple();
+}
+
+#[test]
+fn test_cmd_demo_lines() {
+	cmd_demo_lines();
 }

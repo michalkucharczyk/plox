@@ -850,6 +850,7 @@ dependencies = [
  "cmd_lib",
  "color-print",
  "docify",
+ "plox_macros",
  "regex",
  "serde",
  "strum",
@@ -858,6 +859,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "urlencoding",
+]
+
+[[package]]
+name = "plox_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
 ]
 
 [[package]]

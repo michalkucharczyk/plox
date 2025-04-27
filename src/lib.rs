@@ -1,5 +1,11 @@
 #![doc = include_str!("../SAMPLE.md")]
 
+#[cfg(feature = "generate-readme")]
+docify::compile_markdown!("SAMPLE.docify.md", "SAMPLE.local.md");
+
+#[cfg(feature = "generate-readme")]
+plox_macros::plox_docify_generate2!("SAMPLE.local.md", "SAMPLE.md");
+
 pub mod align_ranges;
 pub mod cli;
 pub mod error;

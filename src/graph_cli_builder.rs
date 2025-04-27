@@ -178,7 +178,7 @@ impl DataSource {
 ///
 /// This builder allows you to specify the line's data source via [`DataSource`]
 /// (e.g. [`DataSource::FieldValue`], [`DataSource::EventValue`]) and then apply
-/// styling or configuration parameters (e.g. color, axis) via [`LineParam`].
+/// styling or configuration parameters (e.g. color, axis) via [`LineParams`].
 #[derive(Debug, Default)]
 pub struct LineBuilder {
 	/// Marker size
@@ -280,7 +280,7 @@ impl LineBuilder {
 
 /// A builder for incrementally constructing a [`Panel`].
 ///
-/// This builder allows to specify configuration parameters via applying [`PanelParam`].
+/// This builder allows to specify configuration parameters via applying [`PanelParams`].
 #[derive(Debug, Default)]
 pub struct PanelBuilder {
 	/// Title for the panel.
@@ -436,19 +436,19 @@ impl LineParam {
 
 #[derive(Debug, PartialEq)]
 enum PanelParam {
-	/// See: [`PanelParam::panel_title`]
+	/// See: [`PanelParams::panel_title`]
 	PanelTitle(String),
 
-	/// See: [`PanelParam::height`]
+	/// See: [`PanelParams::height`]
 	Height(f64),
 
-	/// See: [`PanelParam::yaxis_scale`]
+	/// See: [`PanelParams::yaxis_scale`]
 	YAxisScale(AxisScale),
 
-	/// See: [`PanelParam::legend`]
+	/// See: [`PanelParams::legend`]
 	Legend(bool),
 
-	/// See: [`PanelParam::time_range_mode`]
+	/// See: [`PanelParams::time_range_mode`]
 	TimeRangeMode(PanelRangeMode),
 }
 
