@@ -75,6 +75,17 @@ Sample matching lines:
 
 ---
 
+### Using a Toml Graph Config.
+
+Draw a graph defined in 👉 [`demo lines`](some-playground/demo-lines.toml) TOML file.
+
+<!-- docify::embed!("tests/cmd_tests.rs", cmd_demo_lines) -->
+
+<img src="some-playground/demo-lines.png" width="800" />
+
+
+---
+
 ### 🧩 Comparing Multiple Logs Side-by-Side
 
 One of `plox`'s most powerful features is the ability to **compare multiple log files on the same graph layout**.
@@ -92,14 +103,3 @@ Similarly, a graph config file can be re-used with many log files:
 <!-- docify::embed!("tests/cmd_tests.rs", cmd_demo_lines_two_files) -->
 
 <img src="some-playground/demo-lines-two-files.png" width="800" />
-
----
-
-### Using a Toml Graph Config.
-
-Draw a graph defined in [`demo lines`](some-playground/demo-lines.toml) TOML file.
-
-<!-- docify::embed!("tests/cmd_tests.rs", cmd_demo_lines) -->
-
-<img src="some-playground/demo-lines.png" width="800" />
-

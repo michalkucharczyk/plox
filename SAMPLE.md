@@ -112,6 +112,23 @@ Sample matching lines:
 
 ---
 
+### Using a Toml Graph Config.
+
+Draw a graph defined in 👉 [`demo lines`](some-playground/demo-lines.toml) TOML file.
+
+```rust,ignore
+plox graph \
+	  --input  some-playground/some.log \
+	  --output some-playground/demo-lines.png \
+	  --config some-playground/demo-lines.toml
+
+```
+
+<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines.png" width="800" />
+
+
+---
+
 ### 🧩 Comparing Multiple Logs Side-by-Side
 
 One of `plox`'s most powerful features is the ability to **compare multiple log files on the same graph layout**.
@@ -152,20 +169,3 @@ plox graph \
 ```
 
 <img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines-two-files.png" width="800" />
-
----
-
-### Using a Toml Graph Config.
-
-Draw a graph defined in [`demo lines`](some-playground/demo-lines.toml) TOML file.
-
-```rust,ignore
-plox graph \
-	  --input  some-playground/some.log \
-	  --output some-playground/demo-lines.png \
-	  --config some-playground/demo-lines.toml
-
-```
-
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines.png" width="800" />
-
