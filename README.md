@@ -38,6 +38,8 @@ This command:
  - Plots the time between repeated "start" entries in lines containing "flush",
  - Adds a second panel with free values from lines containing "mem",
 
+For more examples refer to [sample gallery](./SAMPLE.local.md).
+
 ---
 
 ## 📦 Install

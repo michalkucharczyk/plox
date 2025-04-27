@@ -4,7 +4,7 @@
 docify::compile_markdown!("SAMPLE.docify.md", "SAMPLE.local.md");
 
 #[cfg(feature = "generate-readme")]
-plox_macros::plox_docify_generate2!("SAMPLE.local.md", "SAMPLE.md");
+plox_macros::plox_apply_fix!("SAMPLE.local.md", "SAMPLE.md");
 
 pub mod align_ranges;
 pub mod cli;

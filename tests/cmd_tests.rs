@@ -24,10 +24,36 @@ fn cmd_simple() -> String {
 }
 
 #[docify::export_content]
+fn cmd_simple_panels() -> String {
+	bash!(
+		plox graph
+		  --input  some-playground/some.log
+		  --output some-playground/panels.png
+		  --timestamp-format "[%s]"
+		  --plot down x
+		  --panel
+		  --plot linear x01
+		  --plot linear x02
+		  --plot linear x03
+		  --panel
+		  --event-count event SOME_EVENT
+		  --event event SOME_EVENT 1.0 --yaxis y2 --style points
+	)
+}
+
+#[docify::export_content]
 fn cmd_demo_lines() -> String {
 	bash!(
-		plox graph  --input some-playground/some.log --config some-playground/demo-lines.toml -o some-playground/demo-lines.png
+		plox graph
+		  --input  some-playground/some.log
+		  --output some-playground/demo-lines.png
+		  --config some-playground/demo-lines.toml
 	)
+}
+
+#[test]
+fn test_cmd_simple_panels() {
+	cmd_simple_panels();
 }
 
 #[test]

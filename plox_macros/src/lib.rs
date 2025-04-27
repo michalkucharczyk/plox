@@ -2,43 +2,49 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse::Parse, parse_macro_input, LitStr};
 
-#[proc_macro]
-pub fn plox_docify_embed(input: TokenStream) -> TokenStream {
-	let path = syn::parse_macro_input!(input as syn::LitStr).value();
-	let content = std::fs::read_to_string(path).expect("Failed to read markdown file.");
+fn rewrite_img_src(input: &str) -> String {
+	let re =
+		regex::Regex::new(r#"<img\s+[^>]*src="\s*(some-playground/[^">]+)\s*"[^>]*>"#).unwrap();
 
-	let processed = strip_bash_and_fix_img(&content);
-
-	let output = syn::LitStr::new(&processed, proc_macro2::Span::call_site());
-
-	quote!(#output).into()
+	re.replace_all(input, |caps: &regex::Captures| {
+		let local_path = &caps[1];
+		let remote_path = local_path.replacen(
+			"some-playground/",
+			"https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/",
+			1,
+		);
+		caps[0].replace(local_path, &remote_path)
+	})
+	.to_string()
 }
 
-fn strip_bash_and_fix_img(input: &str) -> String {
-	// strip bash!() container:
-	let bash_re = regex::Regex::new(r#"bash!\(\s*((?:.|\n)*?)\s*\)"#).unwrap();
-	let stripped = bash_re.replace_all(input, |caps: &regex::Captures| caps[1].to_string());
+fn strip_bash_macro(input: &str) -> String {
+	let re = regex::Regex::new(r#"bash!\(\s*((?:.|\n)*?)\s*\)"#).unwrap();
+	re.replace_all(input, |caps: &regex::Captures| {
+		let content = &caps[1];
 
-	// replace all local paths to github urls:
-	let img_re =
-		regex::Regex::new(r#"<img\s+[^>]*src="\s*(some-playground/[^">]+\.png)\s*"[^>]*>"#)
-			.unwrap();
+		let lines: Vec<&str> = content.lines().collect();
 
-	img_re
-		.replace_all(&stripped, |caps: &regex::Captures| {
-			let local_path = &caps[1];
-			let remote_path = local_path.replacen(
-				"some-playground/",
-				"https://raw.githubusercontent.com/michalkucharczyk/plox/main/some-playground/",
-				1,
-			);
-			caps[0].replace(local_path, &remote_path)
-		})
-		.to_string()
+		if lines.len() <= 1 {
+			content.trim().to_string()
+		} else {
+			let mut out = String::new();
+			for (i, line) in lines.iter().enumerate() {
+				let trimmed = line.trim_end();
+				out.push_str(trimmed);
+				if i + 1 != lines.len() {
+					out.push_str(" \\");
+				}
+				out.push('\n');
+			}
+			out
+		}
+	})
+	.to_string()
 }
 
 #[proc_macro]
-pub fn plox_docify_generate2(input: TokenStream) -> TokenStream {
+pub fn plox_apply_fix(input: TokenStream) -> TokenStream {
 	let args = parse_macro_input!(input as Args);
 	let input_path = args.input.value();
 	let output_path = args.output.value();
@@ -46,9 +52,13 @@ pub fn plox_docify_generate2(input: TokenStream) -> TokenStream {
 	let content = std::fs::read_to_string(&input_path)
 		.unwrap_or_else(|_| panic!("Failed to read {}", input_path));
 
-	let processed = strip_bash_and_fix_img(&content);
+	let stripped = strip_bash_macro(&content);
+	let rewritten = rewrite_img_src(&stripped);
 
-	std::fs::write(&output_path, processed)
+	std::fs::write(&input_path, stripped)
+		.unwrap_or_else(|_| panic!("Failed to write {}", input_path));
+
+	std::fs::write(&output_path, rewritten)
 		.unwrap_or_else(|_| panic!("Failed to write {}", output_path));
 
 	// TokenStream::new() // nothing returned

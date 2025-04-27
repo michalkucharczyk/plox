@@ -1,4 +1,4 @@
-timestamp_format = "%s"
+timestamp_format = "[%s]"
 
 [[panels]]
 
