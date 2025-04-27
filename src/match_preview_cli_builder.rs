@@ -130,12 +130,18 @@ pub struct SharedMatchPreviewContext {
 	pub count: usize,
 
 	/// The format of the timestamp which is used in logs.
-	#[arg(long, default_value = DEFAULT_TIMESTAMP_FORMAT)]
-	pub timestamp_format: TimestampFormat,
+	#[arg(long)]
+	pub timestamp_format: Option<TimestampFormat>,
 
 	/// Enable match preview verbose ouptut.
 	#[arg(long, default_value_t = false)]
 	pub verbose: bool,
+}
+
+impl SharedMatchPreviewContext {
+	pub fn timestamp_format(&self) -> &TimestampFormat {
+		self.timestamp_format.as_ref().unwrap_or(&DEFAULT_TIMESTAMP_FORMAT)
+	}
 }
 
 /// Constructs the command-line interface (CLI) for the match preview command.

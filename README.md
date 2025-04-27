@@ -6,6 +6,8 @@ You give it logs. It gives you a graph.
 
 Turn timestamped logs into clean plots.  Extract numeric values from log files and plot them over time. Fully CLI-driven. Regex-based. Configurable.
 
+For some examples refer to [sample gallery](./SAMPLE.md).
+
 ## ✨ Features
 
 - Regex-based field extraction with optional fast line filtering,
@@ -25,18 +27,22 @@ Turn timestamped logs into clean plots.  Extract numeric values from log files a
 
 ```bash
 plox graph \
-  --plot cpu "usage: ([0-9.]+)" \
-  --event maintain "paused" 128 \
-  --event-delta flush "start" \
-  --panel \
-  --plot mem "free: ([0-9.]+)"
+	  --input  some-playground/some.log \
+	  --output some-playground/panels.png \
+	  --timestamp-format "[%s]" \
+	  --plot om_module x \
+	  --panel \
+	  --plot x_module x01 \
+	  --plot x_module x02 \
+	  --plot x_module x03 \
+	  --panel \
+	  --event-count foo_module SOME_EVENT \
+	  --event foo_module SOME_EVENT 1.0 --yaxis y2 --style points
 ```
 
-This command:
- - Plots usage values from lines containing "cpu",
- - Adds a fixed marker at value 128 whenever "paused" appears in lines containing "maintain",
- - Plots the time between repeated "start" entries in lines containing "flush",
- - Adds a second panel with free values from lines containing "mem",
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/panels.png" width="800" />
+
+For more examples refer to [sample gallery](./SAMPLE.md).
 
 ---
 

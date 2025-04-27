@@ -1,0 +1,7 @@
+per_file_panels = true
+
+[[panels]]
+
+[[panels.lines]]
+guard = "c1"
+field = "d"

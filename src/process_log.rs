@@ -504,7 +504,7 @@ pub fn process_inputs(
 			let processor = LineProcessor::from_data_source(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
-				shared_context.timestamp_format.clone(),
+				shared_context.timestamp_format().clone(),
 			)?;
 
 			processors
@@ -576,7 +576,7 @@ pub fn regex_match_preview_inner(
 	let mut processor = LineProcessor::from_data_source(
 		config.data_source.clone(),
 		None,
-		context.timestamp_format.clone(),
+		context.timestamp_format().clone(),
 	)?;
 
 	let input_file = File::open(&context.input)
@@ -710,13 +710,20 @@ impl TimestampFormat {
 					chrono::format::StrftimeItems::new(fmt),
 				)?;
 
-				//hack: this may need some rethink / clean up
-				//todo: clean up date
-				if parsed.year().is_none() {
-					let _ = parsed.set_year(2025);
-				}
+				trace!(target:MATCH_PREVIEW, ?parsed, "extract_timestamp");
 
-				let dt = parsed.to_naive_datetime_with_offset(0)?;
+				let dt = match parsed.to_naive_datetime_with_offset(0) {
+					Ok(dt) => dt,
+					_ => {
+						//hack: this may need some rethink / clean up
+						//todo: clean up date
+						if parsed.year().is_none() {
+							parsed.set_year(2025)?;
+						}
+						parsed.to_naive_datetime_with_offset(0)?
+					},
+				};
+
 				(ExtractedNaiveDateTime::DateTime(dt), remainder)
 
 				// NaiveDateTime::parse_and_remainder(line, fmt)
@@ -961,18 +968,7 @@ mod tests {
 	fn call_propagate_shared_csv_files(
 		config: &mut ResolvedGraphConfig,
 	) -> Result<HashMap<PathBuf, ResolvedLine>, Error> {
-		let shared_context = SharedGraphContext {
-			input: vec![PathBuf::from("input.log")],
-			per_file_panels: false,
-			timestamp_format: DEFAULT_TIMESTAMP_FORMAT.into(),
-			force_csv_regen: false,
-			output_config_path: None,
-			output: None,
-			inline_output: None,
-			cache_dir: Some(PathBuf::from(".plox/")),
-			panel_alignment_mode: None,
-			time_range: None,
-		};
+		let shared_context = SharedGraphContext::new_with_input(vec![PathBuf::from("input.log")]);
 		propagate_shared_csv_files(config, &shared_context, |_, _| {
 			Ok(PathBuf::from("/some/out/dir"))
 		})
@@ -983,6 +979,29 @@ mod tests {
 		init_tracing_test();
 		let mut config =
 			build_resolved_graph_config(vec![plot_line("input.log", Some("guard"), "duration")]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 1, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00a() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			plot_line("input.log", Some("guard"), "duration"),
+			event_count_line("input.log", Some("guard"), "duration"),
+		]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 1, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00b() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			plot_line("input.log", Some("guard"), "duration"),
+			event_count_line("input.log", Some("guard"), "duration"),
+			event_delta_line("input.log", Some("guard"), "duration"),
+		]);
 		let output = call_propagate_shared_csv_files(&mut config).unwrap();
 		check_output_and_config(config, output, 1, false);
 	}
@@ -1211,6 +1230,39 @@ mod tests {
 
 		let d = NaiveDate::from_ymd_opt(2025, 4, 20).unwrap();
 		let t = NaiveTime::from_hms_opt(8, 26, 13).unwrap();
+		assert_eq!(timestamp.date().unwrap(), d);
+		assert_eq!(timestamp.time(), t);
+
+		processor.process(captures, timestamp);
+
+		assert_eq!(processor.records.len(), 1);
+		let record = &processor.records[0];
+		assert_eq!(record.value, 3.14);
+		assert_eq!(record.count, 1);
+		assert_eq!(record.diff, None);
+	}
+
+	#[test]
+	fn test_line_processing_date_format_seconds_since_epoch() {
+		init_tracing_test();
+		let log_line = "[1577834199]  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let resolved_line =
+			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
+
+		let mut processor = LineProcessor::from_data_source(
+			resolved_line.line.data_source,
+			Some(PathBuf::from("output.csv")),
+			"[%s]".into(),
+		)
+		.unwrap();
+
+		assert!(processor.guard_matches(log_line));
+		let (g, matched) = processor.try_match(log_line);
+		let (captures, timestamp) = matched.unwrap();
+		assert!(g);
+
+		let d = NaiveDate::from_ymd_opt(2019, 12, 31).unwrap();
+		let t = NaiveTime::from_hms_opt(23, 16, 39).unwrap();
 		assert_eq!(timestamp.date().unwrap(), d);
 		assert_eq!(timestamp.time(), t);
 

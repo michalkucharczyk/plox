@@ -240,14 +240,14 @@ impl SharedGraphContext {
 		total_range: (NaiveDateTime, NaiveDateTime),
 	) -> Result<PanelAlignmentMode, Error> {
 		if let Some(time_range) = &self.time_range {
-			let resolved = time_range.resolve(total_range, &self.timestamp_format)?;
+			let resolved = time_range.resolve(total_range, &self.timestamp_format())?;
 			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
 		}
 
 		Ok(match self.panel_alignment_mode {
 			Some(PanelAlignmentModeArg::SharedOverlap) => PanelAlignmentMode::SharedOverlap,
-			Some(PanelAlignmentModeArg::Fixed) => PanelAlignmentMode::SharedFull,
-			_ => PanelAlignmentMode::PerPanel,
+			Some(PanelAlignmentModeArg::SharedFull) => PanelAlignmentMode::SharedFull,
+			Some(PanelAlignmentModeArg::PerPanel) | None => PanelAlignmentMode::PerPanel,
 		})
 	}
 }
@@ -562,6 +562,46 @@ mod tests {
 			assert_eq!(
 				panel.time_range.unwrap().1,
 				NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(13, 00, 00).unwrap(),
+			);
+		}
+	}
+
+	#[test]
+	fn two_lines_x_two_panels_align_full_shared() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config_multi_panel(vec![
+			vec![
+				plot_line(
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(12, 00, 00).unwrap(),
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(12, 30, 00).unwrap(),
+				),
+				plot_line(
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(11, 00, 00).unwrap(),
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(13, 00, 00).unwrap(),
+				),
+			],
+			vec![
+				plot_line(
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(20, 00, 00).unwrap(),
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(21, 00, 00).unwrap(),
+				),
+				plot_line(
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(20, 10, 00).unwrap(),
+					NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(20, 20, 00).unwrap(),
+				),
+			],
+		]);
+
+		resolve_panels_ranges_inner(&mut config, PanelAlignmentMode::SharedFull).unwrap();
+
+		for panel in config.panels {
+			assert_eq!(
+				panel.time_range.unwrap().0,
+				NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(11, 00, 00).unwrap(),
+			);
+			assert_eq!(
+				panel.time_range.unwrap().1,
+				NaiveDate::from_ymd_opt(2025, 5, 16).unwrap().and_hms_opt(21, 00, 00).unwrap(),
 			);
 		}
 	}

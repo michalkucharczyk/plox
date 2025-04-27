@@ -55,7 +55,7 @@ impl ResolvedPanel {
 	}
 
 	pub fn is_empty(&self) -> bool {
-		self.lines.is_empty() || self.lines.iter().all(|line| line.data_points_count == 0)
+		self.lines.is_empty() || self.lines.iter().all(ResolvedLine::is_empty)
 	}
 
 	pub fn input_file(&self) -> &Option<PathBuf> {
@@ -122,6 +122,10 @@ pub struct ResolvedLine {
 }
 
 impl ResolvedLine {
+	pub fn is_empty(&self) -> bool {
+		self.data_points_count == 0
+	}
+
 	pub fn from_explicit_name(line: Line, file_name: PathBuf) -> Self {
 		Self {
 			line,
@@ -291,7 +295,7 @@ pub fn expand_graph_config(
 	// todo!()
 	let mut resolved_panels = vec![];
 
-	if ctx.per_file_panels {
+	if ctx.per_file_panels() {
 		for panel in &graph.panels {
 			let is_any_line_to_be_populated =
 				panel.lines.iter().any(|l| l.source() == LineSource::AllInputFiles);
@@ -400,10 +404,12 @@ pub fn expand_graph_config(
 
 #[cfg(test)]
 mod tests {
+	use tracing::trace;
+
 	use super::*;
 	use crate::{
 		graph_cli_builder,
-		graph_config::{DataSource, Panel, DEFAULT_TIMESTAMP_FORMAT},
+		graph_config::{DataSource, Panel, TimestampFormat, DEFAULT_TIMESTAMP_FORMAT},
 		logging::init_tracing_test,
 	};
 
@@ -593,6 +599,7 @@ mod tests {
 
 	#[test]
 	fn test_populate_to_multiple_panels_01() {
+		init_tracing_test();
 		#[rustfmt::skip]
 		let input = vec![
 			"--input", "A,B,C", 
@@ -600,6 +607,7 @@ mod tests {
 			"--plot", "z",
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		trace!("ctx: {ctx:#?}");
 		let resolved = expand_graph_config(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
@@ -700,6 +708,90 @@ mod tests {
 	}
 
 	#[test]
+	fn test_per_file_panel_flag() {
+		init_tracing_test();
+		#[rustfmt::skip]
+		let input = vec![
+			"--per-file-panels",
+			"--plot", "x",
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels_option(), Some(true));
+
+		let input = vec!["--per-file-panels", "false", "--plot", "x"];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels_option(), Some(false));
+
+		let input = vec!["--plot", "x"];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels_option(), None);
+	}
+
+	#[test]
+	fn test_args_or_config_file() {
+		init_tracing_test();
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01.toml",
+			"--per-file-panels",
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels_option(), Some(true));
+		assert_eq!(ctx.per_file_panels(), true);
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01-with-per-file-panel.toml"
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels(), true);
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01-with-per-file-panel.toml",
+			"--per-file-panels", "false"
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels(), false);
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01-with-timestamp-format.toml"
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%s"));
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01-with-timestamp-format.toml",
+			"--timestamp-format", "%j %I:%M:%S %p"
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%j %I:%M:%S %p"));
+
+		#[rustfmt::skip]
+		let input = vec![
+			"--config", "test-files/config01-with-timestamp-format-with-per-file-panel.toml",
+			"--per-file-panels", "false",
+			"--timestamp-format", "%j %I:%M:%S %p"
+		];
+		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
+		assert_eq!(ctx.per_file_panels(), false);
+		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%j %I:%M:%S %p"));
+	}
+
+	#[test]
+	#[should_panic(expected = "unknown field")]
+	fn test_bad_config_file() {
+		let input = vec!["--config", "test-files/invalid-config.toml"];
+		let res = graph_cli_builder::build_from_cli_args(input);
+		if res.is_err() {
+			panic!("{:?}", res.err());
+		}
+	}
+
+	#[test]
 	fn test_expand_graph_config_minimal() {
 		let config = GraphConfig {
 			panels: vec![Panel {
@@ -723,18 +815,7 @@ mod tests {
 			}],
 		};
 
-		let ctx = SharedGraphContext {
-			input: vec!["log1.txt".into(), "log2.txt".into()],
-			per_file_panels: false,
-			cache_dir: Some(PathBuf::from("x")),
-			timestamp_format: DEFAULT_TIMESTAMP_FORMAT.into(),
-			force_csv_regen: false,
-			output_config_path: None,
-			inline_output: None,
-			output: Some(PathBuf::from("x")),
-			panel_alignment_mode: None,
-			time_range: None,
-		};
+		let ctx = SharedGraphContext::new_with_input(vec!["log1.txt".into(), "log2.txt".into()]);
 
 		let resolved = expand_graph_config(&config, &ctx).unwrap();
 		assert_eq!(resolved.panels.len(), 1);

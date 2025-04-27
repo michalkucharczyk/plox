@@ -1,17 +1,15 @@
+use crate::{
+	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
+	logging::APPV,
+	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
+};
 use std::{
 	fs::File,
 	io::{self, Write},
 	path::PathBuf,
 	process::{Command, ExitStatus},
 };
-
 use tracing::{debug, info};
-
-use crate::{
-	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
-	logging::APPV,
-	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
-};
 
 const LOG_TARGET: &str = "gnuplot";
 
@@ -105,6 +103,37 @@ impl DashStyle {
 	}
 }
 
+use strum::IntoEnumIterator;
+
+#[derive(Debug, Clone, Copy)]
+struct Style {
+	color: Color,
+	dash: DashStyle,
+	marker: MarkerType,
+}
+
+impl Style {
+	pub fn line_style(&self, i: usize) -> String {
+		format!(
+			"set linetype {} {} {} {} lw 2.0 ps 4.0",
+			i,
+			self.color.to_gnuplot(),
+			self.dash.to_gnuplot(),
+			self.marker.to_gnuplot()
+		)
+	}
+}
+
+fn build_default_styles() -> Vec<Style> {
+	let mut styles = Vec::new();
+	for dash in DashStyle::iter() {
+		for (color, marker) in Color::iter().zip(MarkerType::iter().cycle()) {
+			styles.push(Style { color, dash, marker });
+		}
+	}
+	styles
+}
+
 /// Write a gnuplot script to the given output path based on the graph configuration.
 ///
 /// # Arguments
@@ -120,9 +149,8 @@ pub fn write_gnuplot_script(
 	let mut file = File::create(output_script_path)
 		.map_err(|e| Error::ScriptCreationError(output_script_path.clone(), e))?;
 	let num_non_empty_panels = config.panels.iter().filter(|p| !p.is_empty()).count();
-	let plot_height = 1.0 / num_non_empty_panels as f64 - 0.005;
-	let margin = 0.005;
-	let _height = plot_height + margin;
+	let plot_margin = 0.005;
+	let plot_height = 1.0 / num_non_empty_panels as f64 - plot_margin;
 
 	let has_multiple_input_files = context.input.len() > 1;
 
@@ -135,6 +163,14 @@ pub fn write_gnuplot_script(
 
 	gpwr!(file, "set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500")?;
 	gpwr!(file, "set output '{}'", output_image_path.display())?;
+
+	{
+		let styles = build_default_styles().into_iter().take(20);
+		for (i, style) in styles.enumerate() {
+			gpwr!(file, "{}", style.line_style(i + 1))?;
+		}
+	}
+
 	gpwr!(file, "set datafile separator ','")?;
 	gpwr!(file, "set xdata time")?;
 	gpwr!(file, "set timefmt '%Y-%m-%dT%H:%M:%S'")?;
@@ -150,7 +186,7 @@ pub fn write_gnuplot_script(
 	gpwr!(file, "combine_datetime(date_col,time_col) = strcol(date_col) . 'T' . strcol(time_col)")?;
 
 	let mut i = 0;
-	for panel in config.panels.iter() {
+	for panel in config.panels.iter().rev() {
 		debug!(target:LOG_TARGET,"drawing: {:#?}",panel);
 		if panel.is_empty() {
 			continue;
