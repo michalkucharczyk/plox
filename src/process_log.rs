@@ -13,8 +13,8 @@ use std::{
 	path::{Path, PathBuf},
 	time::UNIX_EPOCH,
 };
-use tracing::{debug, info, trace, Level};
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Layer, Registry};
+use tracing::{Level, debug, info, trace};
+use tracing_subscriber::{EnvFilter, Layer, Registry, fmt, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
 pub const MATCH_PREVIEW: &str = "match-preview";
@@ -161,7 +161,7 @@ impl LineProcessor {
 					Some(v) => v,
 					None => {
 						//add conversion warning (if conversion enabled)
-						return
+						return;
 					},
 				};
 			},
@@ -236,11 +236,7 @@ impl ResolvedLine {
 			.expect("filename is validated at this point")
 			.to_string_lossy();
 		let title = self.line.params.title.clone().unwrap_or(self.line.data_source.title());
-		if multi_input_files {
-			format!("{} ({})", title, file_stem)
-		} else {
-			title
-		}
+		if multi_input_files { format!("{} ({})", title, file_stem) } else { title }
 	}
 
 	pub fn source_file_name(&self) -> &PathBuf {
@@ -274,18 +270,18 @@ impl DataSource {
 	fn match_token(&self) -> String {
 		match &self {
 			// DataSource::EventValue { pattern, yvalue, .. } => format!("{}_{}", pattern, yvalue),
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
 			DataSource::FieldValue { field, .. } => field.clone(),
 		}
 	}
 
 	fn pattern(&self) -> String {
 		match &self {
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
 			DataSource::FieldValue { field, .. } => field.clone(),
 		}
 	}
@@ -311,15 +307,16 @@ impl DataSource {
 
 	fn regex_pattern(&self) -> String {
 		match &self {
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } =>
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::FieldValue { field, .. } => {
 				if self.is_field_valid_regex() {
 					field.clone()
 				} else {
 					format!(r"{}=([\d\.]+)(\w+)?", regex::escape(field))
-				},
+				}
+			},
 		}
 	}
 
@@ -330,10 +327,10 @@ impl DataSource {
 
 	pub fn guard(&self) -> &Option<String> {
 		match &self {
-			DataSource::EventValue { guard, .. } |
-			DataSource::EventCount { guard, .. } |
-			DataSource::EventDelta { guard, .. } |
-			DataSource::FieldValue { guard, .. } => guard,
+			DataSource::EventValue { guard, .. }
+			| DataSource::EventCount { guard, .. }
+			| DataSource::EventDelta { guard, .. }
+			| DataSource::FieldValue { guard, .. } => guard,
 		}
 	}
 
@@ -497,7 +494,7 @@ pub fn process_inputs(
 				line.line.data_source.regex_pattern(),
 				csv_output_path.display(),
 			);
-			continue
+			continue;
 		}
 
 		if let Some(canonical_line) = canonical_lines.remove(&csv_output_path) {
@@ -836,7 +833,7 @@ mod tests {
 	use chrono::{NaiveDate, NaiveTime};
 
 	use crate::{
-		graph_config::{Line, DEFAULT_TIMESTAMP_FORMAT},
+		graph_config::{DEFAULT_TIMESTAMP_FORMAT, Line},
 		logging::init_tracing_test,
 		resolved_graph_config::ResolvedPanel,
 	};
@@ -944,9 +941,9 @@ mod tests {
 		for line in config.all_lines() {
 			let mut allowed_canonical_names = vec![];
 			for (output_file_name, canonical) in &output {
-				if line.match_token() == canonical.match_token() &&
-					line.guard() == canonical.guard() &&
-					line.source_file_name() == canonical.source_file_name()
+				if line.match_token() == canonical.match_token()
+					&& line.guard() == canonical.guard()
+					&& line.source_file_name() == canonical.source_file_name()
 				{
 					allowed_canonical_names.push(output_file_name.clone());
 				}

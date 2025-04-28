@@ -1,7 +1,7 @@
 use crate::graph_config::*;
 use clap::{
-	value_parser, Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser,
-	ValueEnum,
+	Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser, ValueEnum,
+	value_parser,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -101,12 +101,13 @@ impl DataSource {
 					pattern: val[1].to_string(),
 					yvalue: val[2].parse::<f64>()?,
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_PLOT_FIELD => match val.len() {
 				1 => DataSource::FieldValue { guard: None, field: val[0].to_string() },
@@ -114,12 +115,13 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					field: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_EVENT_COUNT => match val.len() {
 				1 => DataSource::EventCount { guard: None, pattern: val[0].to_string() },
@@ -127,12 +129,13 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_EVENT_DELTA => match val.len() {
 				1 => DataSource::EventDelta { guard: None, pattern: val[0].to_string() },
@@ -140,18 +143,20 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
-			_ =>
+			_ => {
 				return Err(Error::GeneralCliParseError(format!(
 					"Unknown DataSource id:{}. This is bug",
 					id
-				))),
+				)));
+			},
 		})
 	}
 }
@@ -491,7 +496,7 @@ impl GraphConfig {
 					}
 					current_line_builder = Some(LineBuilder::new().line(data_source));
 				},
-				Event::ApplyLineParam(param) =>
+				Event::ApplyLineParam(param) => {
 					if let Some(builder) = current_line_builder {
 						current_line_builder = Some(builder.apply_param(param))
 					} else {
@@ -499,8 +504,9 @@ impl GraphConfig {
 							"Line parameter {:?} has no associated line.",
 							param
 						)));
-					},
-				Event::ApplyPanelParam(param) =>
+					}
+				},
+				Event::ApplyPanelParam(param) => {
 					if let Some(builder) = current_panel_builder {
 						current_panel_builder = Some(builder.apply_param(param))
 					} else {
@@ -508,7 +514,8 @@ impl GraphConfig {
 							"Panel parameter {:?} has no associated panel.",
 							param
 						)));
-					},
+					}
+				},
 			}
 		}
 

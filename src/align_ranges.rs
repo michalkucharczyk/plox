@@ -123,11 +123,7 @@ impl ResolvedPanel {
 			PanelRangeMode::Full => (min, max),
 			PanelRangeMode::BestFit => {
 				let (start, end) = (*starts.iter().max().unwrap(), *ends.iter().min().unwrap());
-				if start < end {
-					(start, end)
-				} else {
-					(min, max)
-				}
+				if start < end { (start, end) } else { (min, max) }
 			},
 		};
 		self.set_time_range(*start, *end);
@@ -180,10 +176,11 @@ fn resolve_panels_ranges_inner(
 				}
 			}
 		},
-		PanelAlignmentMode::Fixed(start, end) =>
+		PanelAlignmentMode::Fixed(start, end) => {
 			for panel in &mut config.panels {
 				panel.set_time_range(start, end);
-			},
+			}
+		},
 	}
 
 	Ok(())
@@ -205,9 +202,9 @@ impl TimeRangeArg {
 
 		match self {
 			TimeRangeArg::Relative(start_frac, end_frac) => {
-				if !(0.0..=1.0).contains(start_frac) ||
-					!(0.0..=1.0).contains(end_frac) ||
-					start_frac >= end_frac
+				if !(0.0..=1.0).contains(start_frac)
+					|| !(0.0..=1.0).contains(end_frac)
+					|| start_frac >= end_frac
 				{
 					panic!("should already be verified. (this is bug)");
 				}

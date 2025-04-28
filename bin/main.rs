@@ -1,7 +1,7 @@
 use clap::Parser;
 use plox::{
 	align_ranges,
-	cli::{build_cli, Cli, CliCommand, Test1Args, Test2Args},
+	cli::{Cli, CliCommand, Test1Args, Test2Args, build_cli},
 	error::Error,
 	gnuplot, graph_cli_builder,
 	logging::{self, APPV},

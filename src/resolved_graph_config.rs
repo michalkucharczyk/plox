@@ -148,7 +148,7 @@ impl ResolvedLine {
 				data_points_count: 0,
 				time_range: None,
 			}),
-			Some((file_id, file_name)) =>
+			Some((file_id, file_name)) => {
 				ResolvedSource::try_match_input(line.source(), file_id, file_name).map(|source| {
 					Self {
 						line,
@@ -157,7 +157,8 @@ impl ResolvedLine {
 						data_points_count: 0,
 						time_range: None,
 					}
-				}),
+				})
+			},
 		}
 	}
 
@@ -218,9 +219,9 @@ pub enum ResolvedSource {
 impl ResolvedSource {
 	pub fn file_name(&self) -> &PathBuf {
 		match self {
-			ResolvedSource::PopulatedInput { path, .. } |
-			ResolvedSource::FileName(path) |
-			ResolvedSource::FileId { path, .. } => path,
+			ResolvedSource::PopulatedInput { path, .. }
+			| ResolvedSource::FileName(path)
+			| ResolvedSource::FileId { path, .. } => path,
 		}
 	}
 }
@@ -239,10 +240,12 @@ impl ResolvedSource {
 		input_file_name: &Path,
 	) -> Option<Self> {
 		match source {
-			LineSource::FileId(id) if id == input_id =>
-				Some(Self::FileId { index: input_id, path: input_file_name.to_path_buf() }),
-			LineSource::AllInputFiles =>
-				Some(Self::PopulatedInput { index: input_id, path: input_file_name.to_path_buf() }),
+			LineSource::FileId(id) if id == input_id => {
+				Some(Self::FileId { index: input_id, path: input_file_name.to_path_buf() })
+			},
+			LineSource::AllInputFiles => {
+				Some(Self::PopulatedInput { index: input_id, path: input_file_name.to_path_buf() })
+			},
 			_ => None,
 		}
 	}
@@ -305,14 +308,17 @@ pub fn expand_graph_config(
 					.lines
 					.iter()
 					.flat_map(|line| match line.source() {
-						LineSource::FileName(file) =>
-							vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+						LineSource::FileName(file) => {
+							vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+						},
 
-						LineSource::FileId(id) => vec![ResolvedLine::try_from_populated_inputs(
-							line.clone(),
-							Some((id, &ctx.input[id])),
-						)
-						.expect("Line shall be resolvable")],
+						LineSource::FileId(id) => vec![
+							ResolvedLine::try_from_populated_inputs(
+								line.clone(),
+								Some((id, &ctx.input[id])),
+							)
+							.expect("Line shall be resolvable"),
+						],
 						_ => {
 							vec![]
 						},
@@ -350,16 +356,21 @@ pub fn expand_graph_config(
 					.lines
 					.iter()
 					.flat_map(|line| match line.source() {
-						LineSource::FileName(file) =>
-							vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+						LineSource::FileName(file) => {
+							vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+						},
 
-						LineSource::FileId(id) => vec![ResolvedLine::try_from_populated_inputs(
-							line.clone(),
-							Some((id, &ctx.input[id])),
-						)
-						.expect("Line shall be resolvable")],
+						LineSource::FileId(id) => vec![
+							ResolvedLine::try_from_populated_inputs(
+								line.clone(),
+								Some((id, &ctx.input[id])),
+							)
+							.expect("Line shall be resolvable"),
+						],
 						_ => {
-							panic!("Should not be here. Lines to be populated are handled in other branch. (This is bug).")
+							panic!(
+								"Should not be here. Lines to be populated are handled in other branch. (This is bug)."
+							)
 						},
 					})
 					.collect::<Vec<_>>();
@@ -377,8 +388,9 @@ pub fn expand_graph_config(
 				.lines
 				.iter()
 				.flat_map(|line| match line.source() {
-					LineSource::FileName(file) =>
-						vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+					LineSource::FileName(file) => {
+						vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+					},
 
 					LineSource::FileId(_) | LineSource::AllInputFiles => ctx
 						.input
@@ -409,17 +421,17 @@ mod tests {
 	use super::*;
 	use crate::{
 		graph_cli_builder,
-		graph_config::{DataSource, Panel, TimestampFormat, DEFAULT_TIMESTAMP_FORMAT},
+		graph_config::{DEFAULT_TIMESTAMP_FORMAT, DataSource, Panel, TimestampFormat},
 		logging::init_tracing_test,
 	};
 
 	impl Line {
 		fn test_line_name(&self) -> String {
 			match self.data_source {
-				DataSource::EventValue { ref pattern, .. } |
-				DataSource::EventCount { ref pattern, .. } |
-				DataSource::EventDelta { ref pattern, .. } |
-				DataSource::FieldValue { field: ref pattern, .. } => pattern.clone(),
+				DataSource::EventValue { ref pattern, .. }
+				| DataSource::EventCount { ref pattern, .. }
+				| DataSource::EventDelta { ref pattern, .. }
+				| DataSource::FieldValue { field: ref pattern, .. } => pattern.clone(),
 			}
 		}
 	}
