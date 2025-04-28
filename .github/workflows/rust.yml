@@ -19,8 +19,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      # todo: why it fails?
-      run: cargo test --verbose -- --skip test_cmd
+      run: cargo test --verbose
     - name: Install Clippy and Rustfmt
       run: |
         rustup component add clippy rustfmt
