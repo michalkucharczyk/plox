@@ -33,8 +33,10 @@ jobs:
       run: ls -al
     - name: ls2
       run: ls -al some-playground/
+    - name: lsr
+      run: ls -alR
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose -- --show-output
     - name: Install Clippy and Rustfmt
       run: |
         rustup component add clippy rustfmt

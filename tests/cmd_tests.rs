@@ -15,6 +15,12 @@ macro_rules! bash(
 	}}
 );
 
+fn cmd_help() -> String {
+	bash!(
+		plox graph --help
+	)
+}
+
 #[docify::export_content]
 fn cmd_simple() -> String {
 	bash!(
@@ -22,6 +28,12 @@ fn cmd_simple() -> String {
 		  --input  some-playground/default.log
 		  --output some-playground/default.png
 		  --plot om_module x
+	)
+}
+
+fn cmd_simple2() -> String {
+	bash!(
+		plox graph --input  some-playground/default.log --output some-playground/default.png --plot om_module x
 	)
 }
 
@@ -109,7 +121,29 @@ fn cmd_demo_lines_two_files() -> String {
 }
 
 #[test]
+fn test_cmd_help() {
+	eprintln!("Test running in {:?}", std::env::current_dir().unwrap());
+	eprintln!("Checking file: {}", std::path::Path::new("some-playground/default.log").exists());
+	eprintln!("Checking file: {}", env!("CARGO_BIN_EXE_plox"));
+	eprintln!("Checking file: {}", std::path::Path::new(env!("CARGO_BIN_EXE_plox")).exists());
+	cmd_help();
+}
+
+#[test]
+fn test_cmd_simple2() {
+	eprintln!("Test running in {:?}", std::env::current_dir().unwrap());
+	eprintln!("Checking file: {}", std::path::Path::new("some-playground/default.log").exists());
+	eprintln!("Checking file: {}", env!("CARGO_BIN_EXE_plox"));
+	eprintln!("Checking file: {}", std::path::Path::new(env!("CARGO_BIN_EXE_plox")).exists());
+	cmd_simple2();
+}
+
+#[test]
 fn test_cmd_simple() {
+	eprintln!("Test running in {:?}", std::env::current_dir().unwrap());
+	eprintln!("Checking file: {}", std::path::Path::new("some-playground/default.log").exists());
+	eprintln!("Checking file: {}", env!("CARGO_BIN_EXE_plox"));
+	eprintln!("Checking file: {}", std::path::Path::new(env!("CARGO_BIN_EXE_plox")).exists());
 	cmd_simple();
 }
 
