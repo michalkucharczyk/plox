@@ -1,4 +1,6 @@
 use cmd_lib::spawn_with_output;
+use std::io::Write;
+use std::{fs, path::Path};
 
 // Used for running commands visually pleasing in doc tests.
 macro_rules! bash(
@@ -135,6 +137,24 @@ fn test_cmd_simple2() {
 	eprintln!("Checking file: {}", std::path::Path::new("some-playground/default.log").exists());
 	eprintln!("Checking file: {}", env!("CARGO_BIN_EXE_plox"));
 	eprintln!("Checking file: {}", std::path::Path::new(env!("CARGO_BIN_EXE_plox")).exists());
+
+	let plox_dir = Path::new("some-playground/.plox");
+
+	// Create .plox directory if it doesn't exist
+	if !plox_dir.exists() {
+		fs::create_dir_all(&plox_dir).expect("Failed to create some-playground/.plox directory");
+	}
+
+	// Create a test file inside .plox
+	let test_file = plox_dir.join("test_write.txt");
+	let mut file = fs::File::create(&test_file)
+		.expect("Failed to create a test file inside some-playground/.plox");
+
+	writeln!(file, "Hello from test!")
+		.expect("Failed to write to the test file inside some-playground/.plox");
+
+	eprintln!("Successfully created directory and file at {:?}", test_file);
+
 	cmd_simple2();
 }
 
