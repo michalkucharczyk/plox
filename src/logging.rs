@@ -43,7 +43,7 @@ pub fn init_tracing(quiet: bool, verbosity: u8) {
 		let env_filter = if let Some(level) = level {
 			EnvFilter::new(format!("warn,{}={level}", APPV))
 		} else {
-			EnvFilter::new(format!("warn"))
+			EnvFilter::new("warn")
 		};
 
 		let fmt_layer = fmt::layer().without_time().with_target(false).with_level(true);

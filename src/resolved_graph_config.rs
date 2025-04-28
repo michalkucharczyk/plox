@@ -1,3 +1,5 @@
+//! Structures that are results of expansion.
+
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(private_interfaces)]
@@ -16,8 +18,6 @@ use std::{
 	str::FromStr,
 };
 use tracing::info;
-
-///! Structures that are results of expansion.
 
 #[derive(Debug)]
 pub struct ResolvedGraphConfig {
@@ -171,8 +171,8 @@ impl ResolvedLine {
 	}
 
 	/// Set the name of final csv file to be used.
-	pub fn set_shared_csv_filename(&mut self, path: &PathBuf) {
-		self.shared_csv_file = Some(path.clone());
+	pub fn set_shared_csv_filename(&mut self, path: &Path) {
+		self.shared_csv_file = Some(path.to_path_buf());
 	}
 
 	pub fn set_data_points_count(&mut self, count: usize) {
@@ -216,7 +216,7 @@ pub enum ResolvedSource {
 }
 
 impl ResolvedSource {
-	pub fn file_name<'a>(&'a self) -> &'a PathBuf {
+	pub fn file_name(&self) -> &PathBuf {
 		match self {
 			ResolvedSource::PopulatedInput { path, .. } |
 			ResolvedSource::FileName(path) |
@@ -236,13 +236,13 @@ impl ResolvedSource {
 	fn try_match_input(
 		source: LineSource,
 		input_id: usize,
-		input_file_name: &PathBuf,
+		input_file_name: &Path,
 	) -> Option<Self> {
 		match source {
 			LineSource::FileId(id) if id == input_id =>
-				Some(Self::FileId { index: input_id, path: input_file_name.clone() }),
+				Some(Self::FileId { index: input_id, path: input_file_name.to_path_buf() }),
 			LineSource::AllInputFiles =>
-				Some(Self::PopulatedInput { index: input_id, path: input_file_name.clone() }),
+				Some(Self::PopulatedInput { index: input_id, path: input_file_name.to_path_buf() }),
 			_ => None,
 		}
 	}

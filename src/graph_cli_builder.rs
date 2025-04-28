@@ -448,7 +448,7 @@ impl GraphConfig {
 			DummyCliLineArgs::command(),
 			matches,
 			|index, id, param_args| -> Result<(), Error> {
-				let param = LineParam::from_flag(id, &param_args[..])?;
+				let param = LineParam::from_flag(id, param_args)?;
 				events.insert(index, Event::ApplyLineParam(param));
 				Ok(())
 			},
@@ -458,7 +458,7 @@ impl GraphConfig {
 			DummyCliPanelArgs::command(),
 			matches,
 			|index, id, param_args| -> Result<(), Error> {
-				let param = PanelParam::from_flag(id, &param_args[..])?;
+				let param = PanelParam::from_flag(id, param_args)?;
 				events.insert(index, Event::ApplyPanelParam(param));
 				Ok(())
 			},
@@ -743,7 +743,7 @@ for the log line will matched against regex.
 pub fn build_from_matches(
 	matches: &ArgMatches,
 ) -> Result<(GraphConfig, SharedGraphContext), crate::error::Error> {
-	let mut shared_graph_config = SharedGraphContext::from_arg_matches(&matches).map_err(|e| {
+	let mut shared_graph_config = SharedGraphContext::from_arg_matches(matches).map_err(|e| {
 		Error::GeneralCliParseError(format!(
 			"SharedGraphContext Instantiation failed. This is bug. {}",
 			e

@@ -130,7 +130,7 @@ impl ResolvedPanel {
 				}
 			},
 		};
-		self.set_time_range(start.clone(), end.clone());
+		self.set_time_range(*start, *end);
 	}
 }
 
@@ -147,9 +147,9 @@ fn resolve_panels_ranges_inner(
 		PanelAlignmentMode::PerPanel => { /* no change */ },
 		PanelAlignmentMode::SharedFull => {
 			let global_start =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.0).min();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.0).min();
 			let global_end =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.1).max();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.1).max();
 
 			if let (Some(start), Some(end)) = (global_start, global_end) {
 				debug!(target: APPV, "PanelAlignmentMode::AlignSum found range {:?} - {:?}", global_start, global_end);
@@ -164,9 +164,9 @@ fn resolve_panels_ranges_inner(
 		},
 		PanelAlignmentMode::SharedOverlap => {
 			let global_start =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.0).max();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.0).max();
 			let global_end =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.1).min();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.1).min();
 
 			if let (Some(start), Some(end)) = (global_start, global_end) {
 				trace!(target: APPV, "PanelAlignmentMode::AlignIntersection found range {:?} - {:?}", global_start, global_end);
@@ -240,7 +240,7 @@ impl SharedGraphContext {
 		total_range: (NaiveDateTime, NaiveDateTime),
 	) -> Result<PanelAlignmentMode, Error> {
 		if let Some(time_range) = &self.time_range {
-			let resolved = time_range.resolve(total_range, &self.timestamp_format())?;
+			let resolved = time_range.resolve(total_range, self.timestamp_format())?;
 			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
 		}
 

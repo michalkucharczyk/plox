@@ -1,3 +1,5 @@
+//! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
+
 use crate::error::Error;
 use chrono::NaiveDateTime;
 use clap::{Args, Subcommand, ValueEnum};
@@ -10,7 +12,6 @@ use tracing::{error, info};
 use annotate_snippets::{Level, Renderer, Snippet};
 use toml::de::Error as TomlError;
 
-///! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
 
 /// A complete graph configuration composed of one or more [`Panel`]s.
 ///
@@ -57,7 +58,7 @@ impl TimestampFormat {
 
 impl From<&str> for TimestampFormat {
 	fn from(s: &str) -> Self {
-		if Self::format_contains_date(&s) {
+		if Self::format_contains_date(s) {
 			TimestampFormat::DateTime(Cow::Owned(s.into()))
 		} else {
 			TimestampFormat::Time(Cow::Owned(s.into()))

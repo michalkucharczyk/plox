@@ -5,9 +5,10 @@ use clap::{Args, CommandFactory, Parser, Subcommand};
 pub struct Cli {
 	/// Global verbosity (-v , -vv)
 	///
-	/// - info enabled by default
-	/// -v for debug
-	/// -vv for trace
+	/// Levels:
+	///  - info enabled by default
+	///  - -v for debug
+	///  - -vv for trace
 	#[arg(short = 'v', long, action = clap::ArgAction::Count)]
 	pub verbose: u8,
 
