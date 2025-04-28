@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse::Parse, parse_macro_input, LitStr};
+use syn::{LitStr, parse::Parse, parse_macro_input};
 
 fn rewrite_img_src(input: &str) -> String {
 	let re =
