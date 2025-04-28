@@ -1154,7 +1154,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1180,7 +1180,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1207,7 +1207,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_no_year2() {
 		init_tracing_test();
-		let log_line = "Apr 20 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "Apr 20 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1232,7 +1232,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1240,7 +1240,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_seconds_since_epoch() {
 		init_tracing_test();
-		let log_line = "[1577834199]  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "[1577834199]  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1265,7 +1265,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1273,7 +1273,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_no_year() {
 		init_tracing_test();
-		let log_line = "035 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "035 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1298,7 +1298,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1306,7 +1306,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format() {
 		init_tracing_test();
-		let log_line = "2025 035 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "2025 035 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1331,7 +1331,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1339,7 +1339,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_time_only() {
 		init_tracing_test();
-		let log_line = "08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1363,7 +1363,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1384,7 +1384,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1435,7 +1435,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1487,7 +1487,7 @@ mod tests {
 		if let Error::RegexCapturesGroupsInvalidCount(x) = err {
 			assert_eq!(x, r);
 		} else {
-			assert!(false, "incorrect error value");
+			panic!("incorrect error value");
 		}
 	}
 

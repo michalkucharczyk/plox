@@ -290,7 +290,7 @@ mod tests {
 	) -> ResolvedGraphConfig {
 		let panels = vec_of_lines
 			.into_iter()
-			.map(|lines| ResolvedPanel::new_with_lines(lines))
+			.map(ResolvedPanel::new_with_lines)
 			.collect();
 		ResolvedGraphConfig { panels }
 	}

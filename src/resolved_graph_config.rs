@@ -505,7 +505,7 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		let resolved = expand_graph_config(&config, &ctx).unwrap();
-		check_lines!(resolved, 1, vec![2], vec![vec!["A", "B"]], vec![vec!["x", "y"]]);
+		check_lines!(resolved, 1, [2], vec![vec!["A", "B"]], vec![vec!["x", "y"]]);
 	}
 
 	#[test]
@@ -516,7 +516,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![6],
+			[6],
 			vec![vec!["A", "B", "C", "A", "B", "C"]],
 			vec![vec!["x", "x", "x", "y", "y", "y"]]
 		);
@@ -530,7 +530,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["A", "B", "C", "B"]],
 			vec![vec!["x", "x", "x", "y"]]
 		);
@@ -544,7 +544,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["B", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"]]
 		);
@@ -558,7 +558,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"]]
 		);
@@ -580,7 +580,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			2,
-			vec![4, 4],
+			[4, 4],
 			vec![vec!["D", "A", "B", "C"], vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"], vec!["u", "t", "t", "t"]]
 		);
@@ -603,7 +603,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			2,
-			vec![5, 4],
+			[5, 4],
 			vec![vec!["D", "B", "A", "B", "C"], vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "z", "z", "z"], vec!["u", "t", "t", "t"]]
 		);
@@ -624,7 +624,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			3,
-			vec![1, 1, 1],
+			[1, 1, 1],
 			vec![vec!["A"], vec!["B"], vec!["C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"]]
 		);
@@ -644,7 +644,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			3,
-			vec![2, 2, 2],
+			[2, 2, 2],
 			vec![vec!["A", "A"], vec!["B", "B"], vec!["C", "C"]],
 			vec![vec!["x", "y"], vec!["x", "y"], vec!["x", "y"]]
 		);
@@ -665,7 +665,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 1, 1, 1],
+			[1, 1, 1, 1, 1, 1],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["A"], vec!["B"], vec!["C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["x"], vec!["x"], vec!["x"]]
 		);
@@ -689,7 +689,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 2, 2, 2],
+			[1, 1, 1, 2, 2, 2],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["B", "A"], vec!["B", "B"], vec!["B", "C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["y", "x"], vec!["y", "x"], vec!["y", "x"]]
 		);
@@ -713,7 +713,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 2, 2, 2],
+			[1, 1, 1, 2, 2, 2],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["D", "A"], vec!["D", "B"], vec!["D", "C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["y", "x"], vec!["y", "x"], vec!["y", "x"]]
 		);
@@ -750,14 +750,14 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		assert_eq!(ctx.per_file_panels_option(), Some(true));
-		assert_eq!(ctx.per_file_panels(), true);
+		assert!(ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
 			"--config", "test-files/config01-with-per-file-panel.toml"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), true);
+		assert!(ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
@@ -765,7 +765,7 @@ mod tests {
 			"--per-file-panels", "false"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), false);
+		assert!(!ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
@@ -789,7 +789,7 @@ mod tests {
 			"--timestamp-format", "%j %I:%M:%S %p"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), false);
+		assert!(!ctx.per_file_panels());
 		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%j %I:%M:%S %p"));
 	}
 
@@ -855,9 +855,9 @@ mod tests {
 				.file_name(),
 			&c
 		);
-		assert_eq!(ResolvedSource::try_match_input(line_source_id.clone(), 2, &c).is_none(), true);
+		assert!(ResolvedSource::try_match_input(line_source_id.clone(), 2, &c).is_none());
 
-		assert_eq!(ResolvedSource::try_match_input(line_source_fn.clone(), 2, &c).is_none(), true);
+		assert!(ResolvedSource::try_match_input(line_source_fn.clone(), 2, &c).is_none());
 		assert_eq!(
 			ResolvedSource::try_from_explicit(line_source_fn.clone()).unwrap().file_name(),
 			&x

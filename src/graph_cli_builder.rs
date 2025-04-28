@@ -774,7 +774,7 @@ pub fn build_from_matches(
 pub fn build_from_cli_args(
 	args: Vec<&'static str>,
 ) -> Result<(GraphConfig, SharedGraphContext), crate::error::Error> {
-	let full_args: Vec<_> = ["graph"].into_iter().chain(args.into_iter()).collect();
+	let full_args: Vec<_> = ["graph"].into_iter().chain(args).collect();
 	let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 	build_from_matches(&matches)
 }
@@ -1318,13 +1318,13 @@ mod tests {
 		let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 		let parsed = GraphConfig::try_from_matches(&matches).unwrap();
 
-		parsed.save_to_file(&Path::new("/tmp/parsed.toml")).unwrap();
-		expected.save_to_file(&Path::new("/tmp/expected.toml")).unwrap();
+		parsed.save_to_file(Path::new("/tmp/parsed.toml")).unwrap();
+		expected.save_to_file(Path::new("/tmp/expected.toml")).unwrap();
 
 		if !Path::new(config_file).exists() {
-			parsed.save_to_file(&Path::new(config_file)).unwrap();
+			parsed.save_to_file(Path::new(config_file)).unwrap();
 		}
-		let loaded = GraphConfig::load_from_file(&Path::new(config_file)).unwrap();
+		let loaded = GraphConfig::load_from_file(Path::new(config_file)).unwrap();
 		trace!("loaded: {:#?}", loaded);
 		trace!("parsed: {:#?}", parsed);
 		trace!("expect: {:#?}", expected);
