@@ -1,14 +1,14 @@
 use clap::Parser;
-use std::{process::ExitCode, time::Instant};
-use tracing::{debug, error, info, trace};
 use plox::{
 	align_ranges,
-	cli::{build_cli, Cli, CliCommand, Test1Args, Test2Args},
+	cli::{Cli, CliCommand, Test1Args, Test2Args, build_cli},
 	error::Error,
 	gnuplot, graph_cli_builder,
 	logging::{self, APPV},
 	match_preview_cli_builder, process_log, resolved_graph_config,
 };
+use std::{process::ExitCode, time::Instant};
+use tracing::{debug, error, info, trace};
 
 fn main() -> ExitCode {
 	match inner_main() {
@@ -27,12 +27,12 @@ fn inner_main() -> Result<(), Error> {
 
 	if let Some(graph_matches) = matches.subcommand_matches("match-preview") {
 		let (config, shared_context) =
-			match_preview_cli_builder::build_from_matches(&graph_matches)?;
+			match_preview_cli_builder::build_from_matches(graph_matches)?;
 		info!(target:APPV, "Provided input preview config:{config:#?}");
 		info!(target:APPV, "Provided SharedPreviewContext:{shared_context:#?}");
 		process_log::regex_match_preview(config, shared_context).map_err(Into::<Error>::into)?;
 	} else if let Some(graph_matches) = matches.subcommand_matches("graph") {
-		let (config, shared_context) = graph_cli_builder::build_from_matches(&graph_matches)?;
+		let (config, shared_context) = graph_cli_builder::build_from_matches(graph_matches)?;
 
 		trace!(target:APPV, "Provided input graph config:{config:#?}");
 		trace!(target:APPV, "Provided SharedGraphContext:{shared_context:#?}");

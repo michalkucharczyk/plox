@@ -6,7 +6,7 @@ use crate::{
 use std::{
 	fs::File,
 	io::{self, Write},
-	path::PathBuf,
+	path::{Path, PathBuf},
 	process::{Command, ExitStatus},
 };
 use tracing::{debug, info};
@@ -18,7 +18,7 @@ pub enum Error {
 	#[error("I/O error: {0}")]
 	IoError(#[from] io::Error),
 	#[error("CSV data files not resolved properly (internal bug) for line: {0:#?}")]
-	CvsFilesResolutionError(ResolvedLine),
+	CvsFilesResolutionError(Box<ResolvedLine>),
 	#[error("Looks like '{0}' command is not available: {1}")]
 	GnuplotCommandNotAvailable(String, io::Error),
 	#[error("gnuplot execution error: '{0}' / {1}")]
@@ -144,7 +144,7 @@ pub fn write_gnuplot_script(
 	config: &ResolvedGraphConfig,
 	context: &SharedGraphContext,
 	output_script_path: &PathBuf,
-	output_image_path: &PathBuf,
+	output_image_path: &Path,
 ) -> Result<(), Error> {
 	let mut file = File::create(output_script_path)
 		.map_err(|e| Error::ScriptCreationError(output_script_path.clone(), e))?;
@@ -226,8 +226,9 @@ pub fn write_gnuplot_script(
 
 		gpwr!(file, "plot \\")?;
 		for (j, line) in panel.lines.iter().enumerate() {
-			let csv_data_path =
-				line.shared_csv_filename().ok_or(Error::CvsFilesResolutionError(line.clone()))?;
+			let csv_data_path = line
+				.shared_csv_filename()
+				.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
 
 			// build style parts
 			let mut style_parts: Vec<String> = Vec::new();

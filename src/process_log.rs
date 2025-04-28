@@ -13,8 +13,8 @@ use std::{
 	path::{Path, PathBuf},
 	time::UNIX_EPOCH,
 };
-use tracing::{debug, info, trace, Level};
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Layer, Registry};
+use tracing::{Level, debug, info, trace};
+use tracing_subscriber::{EnvFilter, Layer, Registry, fmt, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
 pub const MATCH_PREVIEW: &str = "match-preview";
@@ -38,8 +38,8 @@ pub enum Error {
 }
 
 impl Error {
-	fn new_file_io_error(f: &PathBuf, e: io::Error) -> Self {
-		Self::FileIoError(f.clone(), e)
+	fn new_file_io_error(f: &Path, e: io::Error) -> Self {
+		Self::FileIoError(f.to_path_buf(), e)
 	}
 }
 
@@ -115,7 +115,7 @@ impl LineProcessor {
 			} else {
 				info!(target:MATCH_PREVIEW, "try_match: line:\"{line}\"");
 			}
-			if let Some((timestamp, remainder)) = self.extract_timestamp(&line).ok() {
+			if let Ok((timestamp, remainder)) = self.extract_timestamp(line) {
 				let captures = self.regex.captures(remainder).map(|capture| (capture, timestamp));
 
 				if tracing::event_enabled!(Level::TRACE) {
@@ -123,12 +123,12 @@ impl LineProcessor {
 				} else {
 					debug!(target:MATCH_PREVIEW, "try_match: line remainder: \"{remainder}\"");
 					if let Some((captures, _)) = &captures {
-						captures.get(1).map(|c| {
+						if let Some(c) = captures.get(1) {
 							debug!(target:MATCH_PREVIEW, "try_match: (value) captures[1]={c:?}");
-						});
-						captures.get(2).map(|c| {
+						};
+						if let Some(c) = captures.get(2) {
 							debug!(target:MATCH_PREVIEW, "try_match:  (unit) captures[2]={c:?}");
-						});
+						};
 					} else {
 						debug!(target:MATCH_PREVIEW, "try_match: no matches...");
 					}
@@ -161,7 +161,7 @@ impl LineProcessor {
 					Some(v) => v,
 					None => {
 						//add conversion warning (if conversion enabled)
-						return
+						return;
 					},
 				};
 			},
@@ -173,7 +173,7 @@ impl LineProcessor {
 	fn write_csv(&self) -> Result<(), Error> {
 		let filename = self.expect_output_path();
 		let mut file =
-			File::create(&filename).map_err(|e| Error::FileIoError(filename.clone(), e))?;
+			File::create(filename).map_err(|e| Error::FileIoError(filename.clone(), e))?;
 		match self.timestamp_format {
 			TimestampFormat::Time(_) => {
 				writeln!(file, "date,time,value,count,delta")
@@ -236,18 +236,14 @@ impl ResolvedLine {
 			.expect("filename is validated at this point")
 			.to_string_lossy();
 		let title = self.line.params.title.clone().unwrap_or(self.line.data_source.title());
-		if multi_input_files {
-			format!("{} ({})", title, file_stem)
-		} else {
-			title
-		}
+		if multi_input_files { format!("{} ({})", title, file_stem) } else { title }
 	}
 
 	pub fn source_file_name(&self) -> &PathBuf {
 		self.source.file_name()
 	}
 
-	pub fn guard<'a>(&'a self) -> &'a Option<String> {
+	pub fn guard(&self) -> &Option<String> {
 		self.line.data_source.guard()
 	}
 
@@ -274,18 +270,18 @@ impl DataSource {
 	fn match_token(&self) -> String {
 		match &self {
 			// DataSource::EventValue { pattern, yvalue, .. } => format!("{}_{}", pattern, yvalue),
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
 			DataSource::FieldValue { field, .. } => field.clone(),
 		}
 	}
 
 	fn pattern(&self) -> String {
 		match &self {
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
 			DataSource::FieldValue { field, .. } => field.clone(),
 		}
 	}
@@ -302,7 +298,7 @@ impl DataSource {
 				}
 			}
 		}
-		return Ok(false);
+		Ok(false)
 	}
 
 	fn is_field_valid_regex(&self) -> bool {
@@ -311,15 +307,16 @@ impl DataSource {
 
 	fn regex_pattern(&self) -> String {
 		match &self {
-			DataSource::EventValue { pattern, .. } |
-			DataSource::EventCount { pattern, .. } |
-			DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } =>
+			DataSource::EventValue { pattern, .. }
+			| DataSource::EventCount { pattern, .. }
+			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
+			DataSource::FieldValue { field, .. } => {
 				if self.is_field_valid_regex() {
-					return field.clone()
+					field.clone()
 				} else {
 					format!(r"{}=([\d\.]+)(\w+)?", regex::escape(field))
-				},
+				}
+			},
 		}
 	}
 
@@ -328,12 +325,12 @@ impl DataSource {
 		Regex::new(&self.regex_pattern()).map_err(Into::into)
 	}
 
-	pub fn guard<'a>(&'a self) -> &'a Option<String> {
+	pub fn guard(&self) -> &Option<String> {
 		match &self {
-			DataSource::EventValue { guard, .. } |
-			DataSource::EventCount { guard, .. } |
-			DataSource::EventDelta { guard, .. } |
-			DataSource::FieldValue { guard, .. } => guard,
+			DataSource::EventValue { guard, .. }
+			| DataSource::EventCount { guard, .. }
+			| DataSource::EventDelta { guard, .. }
+			| DataSource::FieldValue { guard, .. } => guard,
 		}
 	}
 
@@ -382,7 +379,7 @@ impl ResolvedLine {
 			.expect("file path shall be given")
 			.to_string_lossy();
 
-		let ts = fs::metadata(&self.source_file_name())
+		let ts = fs::metadata(self.source_file_name())
 			.and_then(|m| m.modified())
 			.map_err(|_| ())
 			.and_then(|t| t.duration_since(UNIX_EPOCH).map_err(|_| ()))
@@ -497,7 +494,7 @@ pub fn process_inputs(
 				line.line.data_source.regex_pattern(),
 				csv_output_path.display(),
 			);
-			continue
+			continue;
 		}
 
 		if let Some(canonical_line) = canonical_lines.remove(&csv_output_path) {
@@ -525,8 +522,8 @@ pub fn process_inputs(
 		let input_file =
 			File::open(&log_file_name).map_err(|e| Error::new_file_io_error(&log_file_name, e))?;
 		let reader = BufReader::new(input_file);
-		for line in reader.lines().flatten() {
-			for (_, processor) in &mut processors {
+		for line in reader.lines().map_while(Result::ok) {
+			for processor in &mut processors.values_mut() {
 				if let (_, Some((captures, timestamp))) = processor.try_match(&line) {
 					processor.process(captures, timestamp);
 				}
@@ -579,21 +576,19 @@ pub fn regex_match_preview_inner(
 		context.timestamp_format().clone(),
 	)?;
 
-	let input_file = File::open(&context.input)
-		.map_err(|e| Error::FileIoError(context.input.clone().into(), e))?;
+	let input_file =
+		File::open(&context.input).map_err(|e| Error::FileIoError(context.input.clone(), e))?;
 	let reader = BufReader::new(input_file);
 	let mut matched_count = 0;
 
 	info!(target:MATCH_PREVIEW, "input file: {}", context.input.display());
-	config
-		.data_source
-		.guard()
-		.as_ref()
-		.map(|guard| info!(target:MATCH_PREVIEW, "guard: {guard}", ));
+	if let Some(guard) = config.data_source.guard().as_ref() {
+		info!(target:MATCH_PREVIEW, "guard: {guard}")
+	};
 	info!(target:MATCH_PREVIEW, "regex pattern: {}", config.data_source.regex_pattern());
 	info!(target:MATCH_PREVIEW, "timestamp pattern: {:?}", context.timestamp_format);
 
-	for line in reader.lines().flatten() {
+	for line in reader.lines().map_while(Result::ok) {
 		let (guard_matched, captured) = processor.try_match(&line);
 		if guard_matched {
 			if let Some((captures, timestamp)) = captured {
@@ -814,18 +809,18 @@ impl SharedGraphContext {
 	///   result: `./logs/.plox/`
 	///
 	/// The log file must exist and be canonicalizable; otherwise this function returns an error.
-	pub fn get_cache_dir(&self, log_file: &PathBuf) -> Result<PathBuf, Error> {
+	pub fn get_cache_dir(&self, log_file: &Path) -> Result<PathBuf, Error> {
 		let log_file_path =
 			log_file.canonicalize().map_err(|e| Error::new_file_io_error(log_file, e))?; // fails if file doesn't exist
 		self.get_cache_dir_inner(&log_file_path)
 	}
 
-	fn get_cache_dir_inner(&self, log_file_path: &PathBuf) -> Result<PathBuf, Error> {
+	fn get_cache_dir_inner(&self, log_file_path: &Path) -> Result<PathBuf, Error> {
 		assert!(log_file_path.is_absolute());
 		if let Some(root) = self.get_cache_root() {
 			// Strip leading `/` to build a relative path under the root
-			let relative = log_file_path.strip_prefix("/").unwrap_or(&log_file_path);
-			Ok(root.join(relative).parent().unwrap_or(&root).to_path_buf())
+			let relative = log_file_path.strip_prefix("/").unwrap_or(log_file_path);
+			Ok(root.join(relative).parent().unwrap_or(root).to_path_buf())
 		} else {
 			let log_dir = log_file_path.parent().unwrap_or_else(|| Path::new("."));
 			Ok(log_dir.join(".plox"))
@@ -838,7 +833,7 @@ mod tests {
 	use chrono::{NaiveDate, NaiveTime};
 
 	use crate::{
-		graph_config::{Line, DEFAULT_TIMESTAMP_FORMAT},
+		graph_config::{DEFAULT_TIMESTAMP_FORMAT, Line},
 		logging::init_tracing_test,
 		resolved_graph_config::ResolvedPanel,
 	};
@@ -946,9 +941,9 @@ mod tests {
 		for line in config.all_lines() {
 			let mut allowed_canonical_names = vec![];
 			for (output_file_name, canonical) in &output {
-				if line.match_token() == canonical.match_token() &&
-					line.guard() == canonical.guard() &&
-					line.source_file_name() == canonical.source_file_name()
+				if line.match_token() == canonical.match_token()
+					&& line.guard() == canonical.guard()
+					&& line.source_file_name() == canonical.source_file_name()
 				{
 					allowed_canonical_names.push(output_file_name.clone());
 				}
@@ -1159,7 +1154,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1185,7 +1180,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1212,7 +1207,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_no_year2() {
 		init_tracing_test();
-		let log_line = "Apr 20 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "Apr 20 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1237,7 +1232,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1245,7 +1240,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_seconds_since_epoch() {
 		init_tracing_test();
-		let log_line = "[1577834199]  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "[1577834199]  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1270,7 +1265,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1278,7 +1273,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format_no_year() {
 		init_tracing_test();
-		let log_line = "035 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "035 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1303,7 +1298,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1311,7 +1306,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_date_format() {
 		init_tracing_test();
-		let log_line = "2025 035 08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "2025 035 08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1336,7 +1331,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1344,7 +1339,7 @@ mod tests {
 	#[test]
 	fn test_line_processing_time_only() {
 		init_tracing_test();
-		let log_line = "08:26:13 AM  1000     25131   6737.00      3.14 817575604 3179060   2.41  polkadot-parach";
+		let log_line = "08:26:13 AM  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
 		let resolved_line =
 			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
 
@@ -1368,7 +1363,7 @@ mod tests {
 
 		assert_eq!(processor.records.len(), 1);
 		let record = &processor.records[0];
-		assert_eq!(record.value, 3.14);
+		assert_eq!(record.value, 3.17);
 		assert_eq!(record.count, 1);
 		assert_eq!(record.diff, None);
 	}
@@ -1389,7 +1384,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1440,7 +1435,7 @@ mod tests {
 		let mut processor = LineProcessor::from_data_source(
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
-			DEFAULT_TIMESTAMP_FORMAT.into(),
+			DEFAULT_TIMESTAMP_FORMAT,
 		)
 		.unwrap();
 
@@ -1492,7 +1487,7 @@ mod tests {
 		if let Error::RegexCapturesGroupsInvalidCount(x) = err {
 			assert_eq!(x, r);
 		} else {
-			assert!(false, "incorrect error value");
+			panic!("incorrect error value");
 		}
 	}
 

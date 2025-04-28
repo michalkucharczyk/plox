@@ -1,3 +1,5 @@
+//! Structures that are results of expansion.
+
 #![allow(unused_imports)]
 #![allow(dead_code)]
 #![allow(private_interfaces)]
@@ -16,8 +18,6 @@ use std::{
 	str::FromStr,
 };
 use tracing::info;
-
-///! Structures that are results of expansion.
 
 #[derive(Debug)]
 pub struct ResolvedGraphConfig {
@@ -148,7 +148,7 @@ impl ResolvedLine {
 				data_points_count: 0,
 				time_range: None,
 			}),
-			Some((file_id, file_name)) =>
+			Some((file_id, file_name)) => {
 				ResolvedSource::try_match_input(line.source(), file_id, file_name).map(|source| {
 					Self {
 						line,
@@ -157,7 +157,8 @@ impl ResolvedLine {
 						data_points_count: 0,
 						time_range: None,
 					}
-				}),
+				})
+			},
 		}
 	}
 
@@ -171,8 +172,8 @@ impl ResolvedLine {
 	}
 
 	/// Set the name of final csv file to be used.
-	pub fn set_shared_csv_filename(&mut self, path: &PathBuf) {
-		self.shared_csv_file = Some(path.clone());
+	pub fn set_shared_csv_filename(&mut self, path: &Path) {
+		self.shared_csv_file = Some(path.to_path_buf());
 	}
 
 	pub fn set_data_points_count(&mut self, count: usize) {
@@ -216,11 +217,11 @@ pub enum ResolvedSource {
 }
 
 impl ResolvedSource {
-	pub fn file_name<'a>(&'a self) -> &'a PathBuf {
+	pub fn file_name(&self) -> &PathBuf {
 		match self {
-			ResolvedSource::PopulatedInput { path, .. } |
-			ResolvedSource::FileName(path) |
-			ResolvedSource::FileId { path, .. } => path,
+			ResolvedSource::PopulatedInput { path, .. }
+			| ResolvedSource::FileName(path)
+			| ResolvedSource::FileId { path, .. } => path,
 		}
 	}
 }
@@ -236,13 +237,15 @@ impl ResolvedSource {
 	fn try_match_input(
 		source: LineSource,
 		input_id: usize,
-		input_file_name: &PathBuf,
+		input_file_name: &Path,
 	) -> Option<Self> {
 		match source {
-			LineSource::FileId(id) if id == input_id =>
-				Some(Self::FileId { index: input_id, path: input_file_name.clone() }),
-			LineSource::AllInputFiles =>
-				Some(Self::PopulatedInput { index: input_id, path: input_file_name.clone() }),
+			LineSource::FileId(id) if id == input_id => {
+				Some(Self::FileId { index: input_id, path: input_file_name.to_path_buf() })
+			},
+			LineSource::AllInputFiles => {
+				Some(Self::PopulatedInput { index: input_id, path: input_file_name.to_path_buf() })
+			},
 			_ => None,
 		}
 	}
@@ -305,14 +308,17 @@ pub fn expand_graph_config(
 					.lines
 					.iter()
 					.flat_map(|line| match line.source() {
-						LineSource::FileName(file) =>
-							vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+						LineSource::FileName(file) => {
+							vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+						},
 
-						LineSource::FileId(id) => vec![ResolvedLine::try_from_populated_inputs(
-							line.clone(),
-							Some((id, &ctx.input[id])),
-						)
-						.expect("Line shall be resolvable")],
+						LineSource::FileId(id) => vec![
+							ResolvedLine::try_from_populated_inputs(
+								line.clone(),
+								Some((id, &ctx.input[id])),
+							)
+							.expect("Line shall be resolvable"),
+						],
 						_ => {
 							vec![]
 						},
@@ -350,16 +356,21 @@ pub fn expand_graph_config(
 					.lines
 					.iter()
 					.flat_map(|line| match line.source() {
-						LineSource::FileName(file) =>
-							vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+						LineSource::FileName(file) => {
+							vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+						},
 
-						LineSource::FileId(id) => vec![ResolvedLine::try_from_populated_inputs(
-							line.clone(),
-							Some((id, &ctx.input[id])),
-						)
-						.expect("Line shall be resolvable")],
+						LineSource::FileId(id) => vec![
+							ResolvedLine::try_from_populated_inputs(
+								line.clone(),
+								Some((id, &ctx.input[id])),
+							)
+							.expect("Line shall be resolvable"),
+						],
 						_ => {
-							panic!("Should not be here. Lines to be populated are handled in other branch. (This is bug).")
+							panic!(
+								"Should not be here. Lines to be populated are handled in other branch. (This is bug)."
+							)
 						},
 					})
 					.collect::<Vec<_>>();
@@ -377,8 +388,9 @@ pub fn expand_graph_config(
 				.lines
 				.iter()
 				.flat_map(|line| match line.source() {
-					LineSource::FileName(file) =>
-						vec![ResolvedLine::from_explicit_name(line.clone(), file)],
+					LineSource::FileName(file) => {
+						vec![ResolvedLine::from_explicit_name(line.clone(), file)]
+					},
 
 					LineSource::FileId(_) | LineSource::AllInputFiles => ctx
 						.input
@@ -409,17 +421,17 @@ mod tests {
 	use super::*;
 	use crate::{
 		graph_cli_builder,
-		graph_config::{DataSource, Panel, TimestampFormat, DEFAULT_TIMESTAMP_FORMAT},
+		graph_config::{DEFAULT_TIMESTAMP_FORMAT, DataSource, Panel, TimestampFormat},
 		logging::init_tracing_test,
 	};
 
 	impl Line {
 		fn test_line_name(&self) -> String {
 			match self.data_source {
-				DataSource::EventValue { ref pattern, .. } |
-				DataSource::EventCount { ref pattern, .. } |
-				DataSource::EventDelta { ref pattern, .. } |
-				DataSource::FieldValue { field: ref pattern, .. } => pattern.clone(),
+				DataSource::EventValue { ref pattern, .. }
+				| DataSource::EventCount { ref pattern, .. }
+				| DataSource::EventDelta { ref pattern, .. }
+				| DataSource::FieldValue { field: ref pattern, .. } => pattern.clone(),
 			}
 		}
 	}
@@ -493,7 +505,7 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		let resolved = expand_graph_config(&config, &ctx).unwrap();
-		check_lines!(resolved, 1, vec![2], vec![vec!["A", "B"]], vec![vec!["x", "y"]]);
+		check_lines!(resolved, 1, [2], vec![vec!["A", "B"]], vec![vec!["x", "y"]]);
 	}
 
 	#[test]
@@ -504,7 +516,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![6],
+			[6],
 			vec![vec!["A", "B", "C", "A", "B", "C"]],
 			vec![vec!["x", "x", "x", "y", "y", "y"]]
 		);
@@ -518,7 +530,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["A", "B", "C", "B"]],
 			vec![vec!["x", "x", "x", "y"]]
 		);
@@ -532,7 +544,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["B", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"]]
 		);
@@ -546,7 +558,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			1,
-			vec![4],
+			[4],
 			vec![vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"]]
 		);
@@ -568,7 +580,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			2,
-			vec![4, 4],
+			[4, 4],
 			vec![vec!["D", "A", "B", "C"], vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "y", "y"], vec!["u", "t", "t", "t"]]
 		);
@@ -591,7 +603,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			2,
-			vec![5, 4],
+			[5, 4],
 			vec![vec!["D", "B", "A", "B", "C"], vec!["E", "A", "B", "C"]],
 			vec![vec!["x", "y", "z", "z", "z"], vec!["u", "t", "t", "t"]]
 		);
@@ -612,7 +624,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			3,
-			vec![1, 1, 1],
+			[1, 1, 1],
 			vec![vec!["A"], vec!["B"], vec!["C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"]]
 		);
@@ -632,7 +644,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			3,
-			vec![2, 2, 2],
+			[2, 2, 2],
 			vec![vec!["A", "A"], vec!["B", "B"], vec!["C", "C"]],
 			vec![vec!["x", "y"], vec!["x", "y"], vec!["x", "y"]]
 		);
@@ -653,7 +665,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 1, 1, 1],
+			[1, 1, 1, 1, 1, 1],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["A"], vec!["B"], vec!["C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["x"], vec!["x"], vec!["x"]]
 		);
@@ -677,7 +689,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 2, 2, 2],
+			[1, 1, 1, 2, 2, 2],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["B", "A"], vec!["B", "B"], vec!["B", "C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["y", "x"], vec!["y", "x"], vec!["y", "x"]]
 		);
@@ -701,7 +713,7 @@ mod tests {
 		check_lines!(
 			resolved,
 			6,
-			vec![1, 1, 1, 2, 2, 2],
+			[1, 1, 1, 2, 2, 2],
 			vec![vec!["A"], vec!["B"], vec!["C"], vec!["D", "A"], vec!["D", "B"], vec!["D", "C"]],
 			vec![vec!["z"], vec!["z"], vec!["z"], vec!["y", "x"], vec!["y", "x"], vec!["y", "x"]]
 		);
@@ -738,14 +750,14 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		assert_eq!(ctx.per_file_panels_option(), Some(true));
-		assert_eq!(ctx.per_file_panels(), true);
+		assert!(ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
 			"--config", "test-files/config01-with-per-file-panel.toml"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), true);
+		assert!(ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
@@ -753,7 +765,7 @@ mod tests {
 			"--per-file-panels", "false"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), false);
+		assert!(!ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
@@ -777,7 +789,7 @@ mod tests {
 			"--timestamp-format", "%j %I:%M:%S %p"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		assert_eq!(ctx.per_file_panels(), false);
+		assert!(!ctx.per_file_panels());
 		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%j %I:%M:%S %p"));
 	}
 
@@ -843,9 +855,9 @@ mod tests {
 				.file_name(),
 			&c
 		);
-		assert_eq!(ResolvedSource::try_match_input(line_source_id.clone(), 2, &c).is_none(), true);
+		assert!(ResolvedSource::try_match_input(line_source_id.clone(), 2, &c).is_none());
 
-		assert_eq!(ResolvedSource::try_match_input(line_source_fn.clone(), 2, &c).is_none(), true);
+		assert!(ResolvedSource::try_match_input(line_source_fn.clone(), 2, &c).is_none());
 		assert_eq!(
 			ResolvedSource::try_from_explicit(line_source_fn.clone()).unwrap().file_name(),
 			&x

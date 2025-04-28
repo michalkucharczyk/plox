@@ -40,8 +40,8 @@ set y2tics nomirror
 set my2tics 10
 set xrange ["2020-01-01T00:01:41":"2020-01-01T00:15:44"]
 plot \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745781174__foo_module__delta_SOME_EVENT.csv' using (combine_datetime('date','time')):'delta' with points pt 12 ps 7 lc rgb "olive" axes x1y1 title 'delta SOME_EVENT', \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745781174__foo_module__delta_SOME_EVENT.csv' using (combine_datetime('date','time')):'count' with steps axes x1y2 title 'count of SOME_EVENT'
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__foo_module__delta_SOME_EVENT.csv' using (combine_datetime('date','time')):'delta' with points pt 12 ps 7 lc rgb "olive" axes x1y1 title 'delta SOME_EVENT', \
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__foo_module__delta_SOME_EVENT.csv' using (combine_datetime('date','time')):'count' with steps axes x1y2 title 'count of SOME_EVENT'
 unset y2tics
 unset my2tics
 unset multiplot

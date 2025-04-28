@@ -31,11 +31,10 @@ impl MatchPreviewConfig {
 		let data_sources = DataSource::get_cli_ids();
 		let mut data_source = None;
 		for id in &data_sources {
-			if let Some(plot_values) = matches.get_occurrences::<String>(id) {
-				for plot_value in plot_values {
+			if let Some(mut plot_values) = matches.get_occurrences::<String>(id) {
+				if let Some(plot_value) = plot_values.next() {
 					let args: Vec<_> = plot_value.collect();
 					data_source = Some(DataSource::try_from_flag(id, &args)?);
-					break;
 				}
 			}
 		}
@@ -193,7 +192,7 @@ pub fn build_from_matches(
 	matches: &ArgMatches,
 ) -> Result<(MatchPreviewConfig, SharedMatchPreviewContext), crate::error::Error> {
 	let shared_graph_config =
-		SharedMatchPreviewContext::from_arg_matches(&matches).map_err(|e| {
+		SharedMatchPreviewContext::from_arg_matches(matches).map_err(|e| {
 			Error::GeneralCliParseError(format!(
 				"SharedGraphContext Instantiation failed. This is bug. {}",
 				e
@@ -209,7 +208,7 @@ pub fn build_from_matches(
 pub fn build_from_cli_args(
 	args: Vec<&'static str>,
 ) -> Result<(MatchPreviewConfig, SharedMatchPreviewContext), crate::error::Error> {
-	let full_args: Vec<_> = ["graph"].into_iter().chain(args.into_iter()).collect();
+	let full_args: Vec<_> = ["graph"].into_iter().chain(args).collect();
 	let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 	build_from_matches(&matches)
 }

@@ -1,16 +1,20 @@
+//! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
+
 use crate::error::Error;
+use annotate_snippets::{Level, Renderer, Snippet};
 use chrono::NaiveDateTime;
 use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::{
-	borrow::Cow, fmt::Display, fs, path::{Path, PathBuf}, str::FromStr
+	borrow::Cow,
+	fmt::Display,
+	fs,
+	path::{Path, PathBuf},
+	str::FromStr,
 };
 use strum::EnumIter;
-use tracing::{error, info};
-use annotate_snippets::{Level, Renderer, Snippet};
 use toml::de::Error as TomlError;
-
-///! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
+use tracing::{error, info};
 
 /// A complete graph configuration composed of one or more [`Panel`]s.
 ///
@@ -22,13 +26,12 @@ pub struct GraphConfig {
 	pub panels: Vec<Panel>,
 }
 
-
 /// The default format of the timestamp which is used in logs.
 ///
 /// For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
-pub const DEFAULT_TIMESTAMP_STR : &str = "%Y-%m-%d %H:%M:%S%.3f";
-pub const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = TimestampFormat::DateTime(Cow::Borrowed(DEFAULT_TIMESTAMP_STR));
-
+pub const DEFAULT_TIMESTAMP_STR: &str = "%Y-%m-%d %H:%M:%S%.3f";
+pub const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat =
+	TimestampFormat::DateTime(Cow::Borrowed(DEFAULT_TIMESTAMP_STR));
 
 /// Represents user provided timestamp.
 ///
@@ -47,17 +50,17 @@ pub enum TimestampFormat {
 }
 
 impl TimestampFormat {
-    pub fn as_str(&self) -> &str {
-        match self {
-            TimestampFormat::DateTime(cow) => cow.as_ref(),
-            TimestampFormat::Time(cow) => cow.as_ref(),
-        }
-    }
+	pub fn as_str(&self) -> &str {
+		match self {
+			TimestampFormat::DateTime(cow) => cow.as_ref(),
+			TimestampFormat::Time(cow) => cow.as_ref(),
+		}
+	}
 }
 
 impl From<&str> for TimestampFormat {
 	fn from(s: &str) -> Self {
-		if Self::format_contains_date(&s) {
+		if Self::format_contains_date(s) {
 			TimestampFormat::DateTime(Cow::Owned(s.into()))
 		} else {
 			TimestampFormat::Time(Cow::Owned(s.into()))
@@ -66,13 +69,13 @@ impl From<&str> for TimestampFormat {
 }
 
 impl<'de> Deserialize<'de> for TimestampFormat {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(Self::from(s.as_str()))
-    }
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: Deserializer<'de>,
+	{
+		let s = String::deserialize(deserializer)?;
+		Ok(Self::from(s.as_str()))
+	}
 }
 
 impl TimestampFormat {
@@ -125,8 +128,8 @@ pub struct SharedGraphContext {
 	///
 	/// [default: '%Y-%m-%d %H:%M:%S%.3f']
 	#[arg(
-		long, 
-		default_value = None, 
+		long,
+		default_value = None,
 		help_heading = "Input files",
 	)]
 	timestamp_format: Option<TimestampFormat>,
@@ -170,9 +173,9 @@ pub struct SharedGraphContext {
 	///
 	/// Overrides `--output` if both are set.
 	#[arg(
-		long, 
-		value_name = "FILE", 
-		value_parser = validate_standalone_filename, 
+		long,
+		value_name = "FILE",
+		value_parser = validate_standalone_filename,
 		help_heading = "Output files"
 	)]
 	pub inline_output: Option<PathBuf>,
@@ -187,12 +190,7 @@ pub struct SharedGraphContext {
 	/// Strategy for aligning time ranges across all panels.
 	///
 	/// This determines how time-axis (x) ranges are handled when plotting.
-	#[arg(
-		long, 
-		value_enum, 
-		conflicts_with = "time_range", 
-		help_heading = "Panels layout"
-	)]
+	#[arg(long, value_enum, conflicts_with = "time_range", help_heading = "Panels layout")]
 	pub panel_alignment_mode: Option<PanelAlignmentModeArg>,
 
 	/// Optional override for the global time range used in the graph.
@@ -205,9 +203,9 @@ pub struct SharedGraphContext {
 	///
 	/// Conflicts with `--panel-alignment-mode`, and implies global alignment.
 	#[arg(
-		long = "time_range", 
-		value_parser = TimeRangeArg::parse_time_range, 
-		conflicts_with = "panel_alignment_mode", 
+		long = "time_range",
+		value_parser = TimeRangeArg::parse_time_range,
+		conflicts_with = "panel_alignment_mode",
 		help_heading = "Panels layout"
 	)]
 	#[serde(skip)]
@@ -215,14 +213,8 @@ pub struct SharedGraphContext {
 }
 
 impl SharedGraphContext {
-
-	pub fn new_with_input(
-		input: Vec<PathBuf>
-	) -> Self{
-		Self {
-			input,
-			..Default::default()
-		}
+	pub fn new_with_input(input: Vec<PathBuf>) -> Self {
+		Self { input, ..Default::default() }
 	}
 
 	pub fn timestamp_format(&self) -> &TimestampFormat {
@@ -241,18 +233,16 @@ impl SharedGraphContext {
 	/// Intended to merge context given on CLI with one read from file
 	pub fn merge_with_other(&mut self, other: Self) {
 		macro_rules! set_if_none {
-		    ($field:ident) => {
+			($field:ident) => {
 				if self.$field.is_none() {
 					self.$field = other.$field;
 				}
-		    };
+			};
 		}
-		
+
 		set_if_none!(per_file_panels);
 		set_if_none!(timestamp_format);
 	}
-
-
 }
 
 /// A panel that holds multiple [`Line`]s in the same horizontal space.
@@ -749,4 +739,3 @@ pub fn annotate_toml_error(err: &TomlError, source: &str, filename: &str) -> Str
 		err.to_string()
 	}
 }
-

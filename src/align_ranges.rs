@@ -123,14 +123,10 @@ impl ResolvedPanel {
 			PanelRangeMode::Full => (min, max),
 			PanelRangeMode::BestFit => {
 				let (start, end) = (*starts.iter().max().unwrap(), *ends.iter().min().unwrap());
-				if start < end {
-					(start, end)
-				} else {
-					(min, max)
-				}
+				if start < end { (start, end) } else { (min, max) }
 			},
 		};
-		self.set_time_range(start.clone(), end.clone());
+		self.set_time_range(*start, *end);
 	}
 }
 
@@ -147,9 +143,9 @@ fn resolve_panels_ranges_inner(
 		PanelAlignmentMode::PerPanel => { /* no change */ },
 		PanelAlignmentMode::SharedFull => {
 			let global_start =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.0).min();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.0).min();
 			let global_end =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.1).max();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.1).max();
 
 			if let (Some(start), Some(end)) = (global_start, global_end) {
 				debug!(target: APPV, "PanelAlignmentMode::AlignSum found range {:?} - {:?}", global_start, global_end);
@@ -164,9 +160,9 @@ fn resolve_panels_ranges_inner(
 		},
 		PanelAlignmentMode::SharedOverlap => {
 			let global_start =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.0).max();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.0).max();
 			let global_end =
-				config.panels.iter().filter_map(|p| p.time_range().clone()).map(|r| r.1).min();
+				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.1).min();
 
 			if let (Some(start), Some(end)) = (global_start, global_end) {
 				trace!(target: APPV, "PanelAlignmentMode::AlignIntersection found range {:?} - {:?}", global_start, global_end);
@@ -180,10 +176,11 @@ fn resolve_panels_ranges_inner(
 				}
 			}
 		},
-		PanelAlignmentMode::Fixed(start, end) =>
+		PanelAlignmentMode::Fixed(start, end) => {
 			for panel in &mut config.panels {
 				panel.set_time_range(start, end);
-			},
+			}
+		},
 	}
 
 	Ok(())
@@ -205,9 +202,9 @@ impl TimeRangeArg {
 
 		match self {
 			TimeRangeArg::Relative(start_frac, end_frac) => {
-				if !(0.0..=1.0).contains(start_frac) ||
-					!(0.0..=1.0).contains(end_frac) ||
-					start_frac >= end_frac
+				if !(0.0..=1.0).contains(start_frac)
+					|| !(0.0..=1.0).contains(end_frac)
+					|| start_frac >= end_frac
 				{
 					panic!("should already be verified. (this is bug)");
 				}
@@ -240,7 +237,7 @@ impl SharedGraphContext {
 		total_range: (NaiveDateTime, NaiveDateTime),
 	) -> Result<PanelAlignmentMode, Error> {
 		if let Some(time_range) = &self.time_range {
-			let resolved = time_range.resolve(total_range, &self.timestamp_format())?;
+			let resolved = time_range.resolve(total_range, self.timestamp_format())?;
 			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
 		}
 
@@ -291,10 +288,7 @@ mod tests {
 	fn build_resolved_graph_config_multi_panel(
 		vec_of_lines: Vec<Vec<ResolvedLine>>,
 	) -> ResolvedGraphConfig {
-		let panels = vec_of_lines
-			.into_iter()
-			.map(|lines| ResolvedPanel::new_with_lines(lines))
-			.collect();
+		let panels = vec_of_lines.into_iter().map(ResolvedPanel::new_with_lines).collect();
 		ResolvedGraphConfig { panels }
 	}
 

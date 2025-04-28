@@ -40,8 +40,8 @@ set y2tics nomirror
 set my2tics 10
 set xrange ["2019-12-31T23:01:49":"2019-12-31T23:15:45"]
 plot \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__foo_module__value_1_SOME_EVENT.csv' using (combine_datetime('date','time')):'count' with lines axes x1y1 title 'count of SOME_EVENT', \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__foo_module__value_1_SOME_EVENT.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y2 title 'presence of SOME_EVENT'
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__foo_module__value_1_SOME_EVENT.csv' using (combine_datetime('date','time')):'count' with lines axes x1y1 title 'count of SOME_EVENT', \
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__foo_module__value_1_SOME_EVENT.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y2 title 'presence of SOME_EVENT'
 unset y2tics
 unset my2tics
 set origin 0.0,0.3283333333333333
@@ -50,9 +50,9 @@ unset label
 unset logscale y
 set xrange ["2019-12-31T23:00:18":"2019-12-31T23:16:33"]
 plot \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x01', \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x02', \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x03'
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x01', \
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x02', \
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x03'
 unset y2tics
 unset my2tics
 set origin 0.0,0.6566666666666666
@@ -61,7 +61,7 @@ unset label
 unset logscale y
 set xrange ["2019-12-31T23:00:00":"2019-12-31T23:16:20"]
 plot \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745775076__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x'
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/some.log_1745784327__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x'
 unset y2tics
 unset my2tics
 unset multiplot

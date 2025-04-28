@@ -1,7 +1,7 @@
 use crate::graph_config::*;
 use clap::{
-	value_parser, Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser,
-	ValueEnum,
+	Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser, ValueEnum,
+	value_parser,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -101,12 +101,13 @@ impl DataSource {
 					pattern: val[1].to_string(),
 					yvalue: val[2].parse::<f64>()?,
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_PLOT_FIELD => match val.len() {
 				1 => DataSource::FieldValue { guard: None, field: val[0].to_string() },
@@ -114,12 +115,13 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					field: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_EVENT_COUNT => match val.len() {
 				1 => DataSource::EventCount { guard: None, pattern: val[0].to_string() },
@@ -127,12 +129,13 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
 			Self::CLI_NAME_EVENT_DELTA => match val.len() {
 				1 => DataSource::EventDelta { guard: None, pattern: val[0].to_string() },
@@ -140,18 +143,20 @@ impl DataSource {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
 				},
-				_ =>
+				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
 						val.len(),
 						id
-					))),
+					)));
+				},
 			},
-			_ =>
+			_ => {
 				return Err(Error::GeneralCliParseError(format!(
 					"Unknown DataSource id:{}. This is bug",
 					id
-				))),
+				)));
+			},
 		})
 	}
 }
@@ -448,7 +453,7 @@ impl GraphConfig {
 			DummyCliLineArgs::command(),
 			matches,
 			|index, id, param_args| -> Result<(), Error> {
-				let param = LineParam::from_flag(id, &param_args[..])?;
+				let param = LineParam::from_flag(id, param_args)?;
 				events.insert(index, Event::ApplyLineParam(param));
 				Ok(())
 			},
@@ -458,7 +463,7 @@ impl GraphConfig {
 			DummyCliPanelArgs::command(),
 			matches,
 			|index, id, param_args| -> Result<(), Error> {
-				let param = PanelParam::from_flag(id, &param_args[..])?;
+				let param = PanelParam::from_flag(id, param_args)?;
 				events.insert(index, Event::ApplyPanelParam(param));
 				Ok(())
 			},
@@ -491,7 +496,7 @@ impl GraphConfig {
 					}
 					current_line_builder = Some(LineBuilder::new().line(data_source));
 				},
-				Event::ApplyLineParam(param) =>
+				Event::ApplyLineParam(param) => {
 					if let Some(builder) = current_line_builder {
 						current_line_builder = Some(builder.apply_param(param))
 					} else {
@@ -499,8 +504,9 @@ impl GraphConfig {
 							"Line parameter {:?} has no associated line.",
 							param
 						)));
-					},
-				Event::ApplyPanelParam(param) =>
+					}
+				},
+				Event::ApplyPanelParam(param) => {
 					if let Some(builder) = current_panel_builder {
 						current_panel_builder = Some(builder.apply_param(param))
 					} else {
@@ -508,7 +514,8 @@ impl GraphConfig {
 							"Panel parameter {:?} has no associated panel.",
 							param
 						)));
-					},
+					}
+				},
 			}
 		}
 
@@ -743,7 +750,7 @@ for the log line will matched against regex.
 pub fn build_from_matches(
 	matches: &ArgMatches,
 ) -> Result<(GraphConfig, SharedGraphContext), crate::error::Error> {
-	let mut shared_graph_config = SharedGraphContext::from_arg_matches(&matches).map_err(|e| {
+	let mut shared_graph_config = SharedGraphContext::from_arg_matches(matches).map_err(|e| {
 		Error::GeneralCliParseError(format!(
 			"SharedGraphContext Instantiation failed. This is bug. {}",
 			e
@@ -767,7 +774,7 @@ pub fn build_from_matches(
 pub fn build_from_cli_args(
 	args: Vec<&'static str>,
 ) -> Result<(GraphConfig, SharedGraphContext), crate::error::Error> {
-	let full_args: Vec<_> = ["graph"].into_iter().chain(args.into_iter()).collect();
+	let full_args: Vec<_> = ["graph"].into_iter().chain(args).collect();
 	let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 	build_from_matches(&matches)
 }
@@ -1311,13 +1318,13 @@ mod tests {
 		let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 		let parsed = GraphConfig::try_from_matches(&matches).unwrap();
 
-		parsed.save_to_file(&Path::new("/tmp/parsed.toml")).unwrap();
-		expected.save_to_file(&Path::new("/tmp/expected.toml")).unwrap();
+		parsed.save_to_file(Path::new("/tmp/parsed.toml")).unwrap();
+		expected.save_to_file(Path::new("/tmp/expected.toml")).unwrap();
 
 		if !Path::new(config_file).exists() {
-			parsed.save_to_file(&Path::new(config_file)).unwrap();
+			parsed.save_to_file(Path::new(config_file)).unwrap();
 		}
-		let loaded = GraphConfig::load_from_file(&Path::new(config_file)).unwrap();
+		let loaded = GraphConfig::load_from_file(Path::new(config_file)).unwrap();
 		trace!("loaded: {:#?}", loaded);
 		trace!("parsed: {:#?}", parsed);
 		trace!("expect: {:#?}", expected);

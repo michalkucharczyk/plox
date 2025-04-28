@@ -38,7 +38,7 @@ unset label
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:12"]
 plot \
-   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745781174__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x'
+   '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x'
 unset y2tics
 unset my2tics
 unset multiplot
