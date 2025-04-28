@@ -288,10 +288,7 @@ mod tests {
 	fn build_resolved_graph_config_multi_panel(
 		vec_of_lines: Vec<Vec<ResolvedLine>>,
 	) -> ResolvedGraphConfig {
-		let panels = vec_of_lines
-			.into_iter()
-			.map(ResolvedPanel::new_with_lines)
-			.collect();
+		let panels = vec_of_lines.into_iter().map(ResolvedPanel::new_with_lines).collect();
 		ResolvedGraphConfig { panels }
 	}
 
