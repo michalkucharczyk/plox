@@ -31,6 +31,8 @@ jobs:
       run: pwd
     - name: ls
       run: ls -al
+    - name: ls2
+      run: ls -al some-playground/
     - name: Run tests
       run: cargo test --verbose
     - name: Install Clippy and Rustfmt
