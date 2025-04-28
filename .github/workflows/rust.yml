@@ -29,6 +29,8 @@ jobs:
       run: cargo build --verbose
     - name: pwd
       run: pwd
+    - name: ls
+      run: ls -al
     - name: Run tests
       run: cargo test --verbose
     - name: Install Clippy and Rustfmt
