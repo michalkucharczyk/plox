@@ -16,8 +16,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Rust
-      uses: actions/setup-rust@v2    
     - name: Build
       run: cargo build --verbose
     - name: Run tests
