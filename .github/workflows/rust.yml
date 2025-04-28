@@ -27,16 +27,10 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}    
     - name: Build
       run: cargo build --verbose
-    - name: pwd
-      run: pwd
-    - name: ls
-      run: ls -al
-    - name: ls2
-      run: ls -al some-playground/
-    - name: lsr
-      run: ls -alR
+    - name: Install gnuplot
+      run: sudo apt-get update && sudo apt-get install -y gnuplot  
     - name: Run tests
-      run: cargo test --verbose -- --show-output
+      run: cargo test --verbose
     - name: Install Clippy and Rustfmt
       run: |
         rustup component add clippy rustfmt
