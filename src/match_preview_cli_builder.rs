@@ -1,5 +1,8 @@
+//! This module builds the 'match-preview' subcommand, which helps users test their regex patterns.
+
+use crate::data_source_cli_builder::build_data_source_cli;
 use crate::graph_config::*;
-use clap::{Arg, ArgAction, ArgMatches, Args, Command, CommandFactory, FromArgMatches, Parser};
+use clap::{ArgMatches, Args, Command, CommandFactory, FromArgMatches, Parser};
 use std::path::PathBuf;
 use tracing::trace;
 
@@ -11,9 +14,8 @@ pub enum Error {
 	GeneralCliParseError(String),
 	#[error("Missing line data source")]
 	MissingLineDataSource,
-	// should extract DataSource parsing errors into separate type
-	#[error("Nested error: {0}")]
-	NestedCliError(#[from] crate::graph_cli_builder::Error),
+	#[error("CLI parsing error: {0}")]
+	GraphCliParseError(#[from] crate::data_source_cli_builder::Error),
 }
 
 #[derive(Debug)]
@@ -41,74 +43,6 @@ impl MatchPreviewConfig {
 
 		Ok(MatchPreviewConfig { data_source: data_source.expect("xxx"), count: 10 })
 	}
-}
-
-fn extract_help_multiline(args: &[Arg]) -> String {
-	args.iter()
-		.filter_map(|arg| {
-			arg.get_long_help()
-				.or(arg.get_help())
-				.map(|h| format!("  <{}>: {}", arg.get_id(), h))
-		})
-		.collect::<Vec<_>>()
-		.join("\n")
-}
-
-fn extract_num_args_and_names(args: &[Arg]) -> (usize, usize, Vec<String>) {
-	let mut value_names = vec![];
-	let mut required_count = 0;
-
-	for a in args {
-		value_names.push(a.get_id().to_string());
-		if a.is_required_set() {
-			required_count += 1;
-		}
-	}
-
-	let total = args.len();
-	(required_count, total, value_names)
-}
-
-/// Build args from subcommands' parameters and append to given base command
-fn build_data_source_cli(mut base: Command) -> Command {
-	let dummy_data_source_subcommand = DummyDataSourceSubcommand::command();
-	for sub in dummy_data_source_subcommand.get_subcommands() {
-		let sub_name = sub.get_name().to_string();
-		let sub_args: Vec<Arg> = sub.get_arguments().cloned().collect();
-		let sub_help = sub.get_about().unwrap_or_default();
-		let field_help = extract_help_multiline(&sub_args);
-		let (min_args, max_args, value_names) = extract_num_args_and_names(&sub_args);
-
-		let full_help = if field_help.is_empty() {
-			sub_help.to_string()
-		} else {
-			format!("{sub_help}\n{field_help}\n")
-		};
-
-		let flag = Arg::new(sub_name.clone())
-			.long(&sub_name)
-			.num_args(min_args..=max_args)
-			.action(ArgAction::Append)
-			.value_names(&value_names)
-			.help(sub_help.to_string())
-			.long_help(full_help)
-			.next_line_help(true)
-			.help_heading("Data Sources");
-
-		base = base.arg(flag);
-	}
-
-	base
-}
-
-/// Dummy helper wrapper for `CommandFactory`
-///
-/// Used for injecting [`DataSource`] args and their parameters.
-#[derive(Parser, Debug)]
-#[command(name = "dummy")]
-struct DummyDataSourceSubcommand {
-	#[command(subcommand)]
-	line: DataSource,
 }
 
 #[derive(Parser, Debug)]

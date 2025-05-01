@@ -21,7 +21,7 @@ Sample matching line:
 2020-01-01 00:14:59.000 om_module x=100.10
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/default.png" width="800" />
+<img src="some-playground/default.png" width="800" />
 
 ---
 
@@ -48,7 +48,7 @@ Sample matching line:
 2020-01-01 00:14:52.000 yam_module y=(107.107107,892.892893)
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/regex.png" width="800" />
+<img src="some-playground/regex.png" width="800" />
 
 ---
 
@@ -65,8 +65,8 @@ plox graph \
 ```
 
 This command:
-- Plots the time delta between consecutive "SOME_EVENT" appearances (`event-delta`)
-- Plots cumulative number of "SOME_EVENT" occurrences over time (`event-count`)
+- Plots the time delta between consecutive `SOME_EVENT` appearances (`event-delta`)
+- Plots cumulative number of `SOME_EVENT` occurrences over time (`event-count`)
 - It uses `points` style for the deltas and `steps` style for the count
 - Plots deltas on a logarithmic primary y-axis (y)
 - Plots counts on the secondary y-axis (y2)
@@ -76,7 +76,7 @@ Sample matching line:
 2020-01-01 00:16:33.000 foo_module bla bla "SOME_EVENT"
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/deltas.png" width="800" />
+<img src="some-playground/deltas.png" width="800" />
 
 ---
 
@@ -108,7 +108,7 @@ Sample matching lines:
 [1577834174] om_module x=25.03
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/panels.png" width="800" />
+<img src="some-playground/panels.png" width="800" />
 
 ---
 
@@ -124,7 +124,7 @@ plox graph \
 
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines.png" width="800" />
+<img src="some-playground/demo-lines.png" width="800" />
 
 
 ---
@@ -154,7 +154,7 @@ This command:
 - Two log files (`default.log` and `default-other.log`) are provided as input
 - `--per-file-panels` automatically duplicates the panel layout once per input file
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/panels-two-files.png" width="800" />
+<img src="some-playground/panels-two-files.png" width="800" />
 
 Similarly, a graph config file can be re-used with many log files:
 ```rust,ignore
@@ -168,4 +168,4 @@ plox graph \
 
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/some-playground/demo-lines-two-files.png" width="800" />
+<img src="some-playground/demo-lines-two-files.png" width="800" />

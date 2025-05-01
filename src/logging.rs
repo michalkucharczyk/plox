@@ -1,3 +1,5 @@
+//! Sets up structured logging and tracing for the plox binary.
+
 use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::process_log::MATCH_PREVIEW;
@@ -18,12 +20,27 @@ pub fn init_tracing(quiet: bool, verbosity: u8) {
 	use tracing_subscriber::prelude::*;
 	if std::env::var("RUST_LOG").is_ok() {
 		let rust_log_env = std::env::var("RUST_LOG").unwrap_or_default();
-		let preview_given = rust_log_env.contains(MATCH_PREVIEW);
 		let mut full_filter = EnvFilter::new(&rust_log_env);
 
+		// MATCH_PREVIEW is a bit spammy so disable it if not requested directl
+		let preview_given = rust_log_env.contains(MATCH_PREVIEW);
 		if !preview_given {
 			let directive = format!("{}=off", MATCH_PREVIEW);
 			full_filter = full_filter.add_directive(directive.parse().unwrap());
+		}
+
+		// We should still respect -vv, so enable APPV if not given
+		if !rust_log_env.contains(APPV) {
+			let level = match (quiet, verbosity) {
+				(true, _) => None,
+				(false, 0) => Some("info"),
+				(false, 1) => Some("debug"),
+				(false, _) => Some("trace"),
+			};
+			if let Some(level) = level {
+				full_filter =
+					full_filter.add_directive(format!("{}={level}", APPV).parse().unwrap());
+			}
 		}
 
 		let subscriber = tracing_subscriber::registry()

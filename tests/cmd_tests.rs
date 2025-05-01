@@ -1,3 +1,7 @@
+//! Integration tests for the plox CLI, making sure the tool behaves as expected end-to-end.
+//! These tests run real commands with sample inputs and check that the outputs are correct.
+//! Also serves as live examples which are directly inluded into SAMPLE.md file.
+
 use cmd_lib::spawn_with_output;
 
 // Used for running commands visually pleasing in doc tests.

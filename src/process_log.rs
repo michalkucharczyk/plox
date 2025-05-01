@@ -1,3 +1,7 @@
+//! The heart of the log processing engine.
+//! This module parses raw log files, extracts timestamps and numeric fields, and prepares the data for plotting.
+//! It supports value extraction, event counting, deltas, and outputs intermediate CSV caches.
+
 use crate::{
 	graph_config::{DataSource, SharedGraphContext, TimestampFormat},
 	logging::APPV,

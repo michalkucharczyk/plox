@@ -1,3 +1,8 @@
+//! Error handling for the plox project.
+//!
+//! It defines the main `Error` type, wraps lower-level errors, and ensures consistent reporting.
+//! Intended to provide clear, friendly messages when something goes wrong.
+
 use std::io;
 
 #[derive(Debug, thiserror::Error)]

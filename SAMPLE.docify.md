@@ -42,8 +42,8 @@ Sample matching line:
 <!-- docify::embed!("tests/cmd_tests.rs", cmd_deltas_and_count) -->
 
 This command:
-- Plots the time delta between consecutive "SOME_EVENT" appearances (`event-delta`)
-- Plots cumulative number of "SOME_EVENT" occurrences over time (`event-count`)
+- Plots the time delta between consecutive `SOME_EVENT` appearances (`event-delta`)
+- Plots cumulative number of `SOME_EVENT` occurrences over time (`event-count`)
 - It uses `points` style for the deltas and `steps` style for the count
 - Plots deltas on a logarithmic primary y-axis (y)
 - Plots counts on the secondary y-axis (y2)

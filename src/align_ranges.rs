@@ -1,3 +1,7 @@
+//! Responsible for aligning time ranges across multiple datasets and panels.
+//! It ensures that when combining different logs, the time axes line up properly.
+//! This keeps the resulting graphs accurate and easy to compare.
+
 use crate::{
 	graph_config::{
 		PanelAlignmentMode, PanelAlignmentModeArg, PanelRangeMode, SharedGraphContext,
@@ -164,14 +168,16 @@ fn resolve_panels_ranges_inner(
 			let global_end =
 				config.panels.iter().filter_map(|p| *p.time_range()).map(|r| r.1).min();
 
+			//todo: check if all lines are in global_start - global_end range | or make sure they all overlap
+
 			if let (Some(start), Some(end)) = (global_start, global_end) {
-				trace!(target: APPV, "PanelAlignmentMode::AlignIntersection found range {:?} - {:?}", global_start, global_end);
+				trace!(target: APPV, "PanelAlignmentMode::SharedOverlap found range {:?} - {:?}", global_start, global_end);
 				if global_start < global_end {
 					for panel in &mut config.panels {
 						panel.set_time_range(start, end);
 					}
 				} else {
-					debug!(target: APPV, "PanelAlignmentMode::AlignIntersection empty, no range adjustment made {:?} - {:?}", global_start, global_end);
+					debug!(target: APPV, "PanelAlignmentMode::SharedOverlap empty, no range adjustment made {:?} - {:?}", global_start, global_end);
 					/* no change */
 				}
 			}
@@ -243,8 +249,8 @@ impl SharedGraphContext {
 
 		Ok(match self.panel_alignment_mode {
 			Some(PanelAlignmentModeArg::SharedOverlap) => PanelAlignmentMode::SharedOverlap,
-			Some(PanelAlignmentModeArg::SharedFull) => PanelAlignmentMode::SharedFull,
-			Some(PanelAlignmentModeArg::PerPanel) | None => PanelAlignmentMode::PerPanel,
+			Some(PanelAlignmentModeArg::SharedFull) | None => PanelAlignmentMode::SharedFull,
+			Some(PanelAlignmentModeArg::PerPanel) => PanelAlignmentMode::PerPanel,
 		})
 	}
 }

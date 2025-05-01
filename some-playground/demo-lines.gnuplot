@@ -26,6 +26,7 @@ set timefmt '%Y-%m-%dT%H:%M:%S'
 set format x '%H:%M:%S'
 set mxtics 10
 set grid xtics mxtics
+set grid ytics mytics
 set ytics nomirror
 set key noenhanced
 set multiplot

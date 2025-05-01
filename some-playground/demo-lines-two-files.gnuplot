@@ -26,6 +26,7 @@ set timefmt '%Y-%m-%dT%H:%M:%S'
 set format x '%H:%M:%S'
 set mxtics 10
 set grid xtics mxtics
+set grid ytics mytics
 set ytics nomirror
 set key noenhanced
 set multiplot
@@ -37,7 +38,7 @@ set size 1.0,0.16166666666666665
 unset label
 set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
-set xrange ["2020-01-01T00:00:10":"2020-01-01T00:15:38"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x00 (default-other)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x01 (default-other)', \
@@ -57,7 +58,7 @@ set size 1.0,0.16166666666666665
 unset label
 set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
-set xrange ["2020-01-01T00:00:12":"2020-01-01T00:16:23"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x00 (default)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x01 (default)', \
@@ -78,7 +79,7 @@ unset label
 set label 'Lines-points' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 set label '[default-other]' at graph -0.024999999999999998,0.5 rotate by 90 center font"arial,8"
 unset logscale y
-set xrange ["2020-01-01T00:00:10":"2020-01-01T00:15:38"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x00 (default-other)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x01 (default-other)', \
@@ -99,7 +100,7 @@ unset label
 set label 'Lines-points' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 set label '[default]' at graph -0.024999999999999998,0.5 rotate by 90 center font"arial,8"
 unset logscale y
-set xrange ["2020-01-01T00:00:12":"2020-01-01T00:16:23"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x00 (default)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x01 (default)', \
@@ -120,7 +121,7 @@ unset label
 set label 'Steps' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 set label '[default-other]' at graph -0.024999999999999998,0.5 rotate by 90 center font"arial,8"
 unset logscale y
-set xrange ["2020-01-01T00:00:10":"2020-01-01T00:15:38"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x00 (default-other)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default-other.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x01 (default-other)', \
@@ -141,7 +142,7 @@ unset label
 set label 'Steps' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 set label '[default]' at graph -0.024999999999999998,0.5 rotate by 90 center font"arial,8"
 unset logscale y
-set xrange ["2020-01-01T00:00:12":"2020-01-01T00:16:23"]
+set xrange ["2020-01-01T00:00:10":"2020-01-01T00:16:23"]
 plot \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x00 (default)', \
    '/home/miszka/parity/graph-tool/plox/some-playground/.plox/default.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv' using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x01 (default)', \

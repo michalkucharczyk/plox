@@ -1,4 +1,9 @@
-//! Structures that are results of expansion.
+//! Handles the graph config expansion.
+//!
+//! Once a raw graph configuration is loaded, this module resolves it into a ready-to-use form.
+//! It fills in defaults, validates values, and produces concrete plotting layout by binding lines and panels to input
+//! log files.
+//! This is the bridge between user input and the internal structures the tool relies on.
 
 #![allow(unused_imports)]
 #![allow(dead_code)]
