@@ -27,7 +27,7 @@ For some examples refer to [sample gallery](./SAMPLE.md).
 
 <!-- docify::embed!("tests/cmd_tests.rs", cmd_simple_panels) -->
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/panels.png" width="800" />
+<img src="tests/examples/panels.png" width="800" />
 
 For more examples refer to [sample gallery](./SAMPLE.md).
 

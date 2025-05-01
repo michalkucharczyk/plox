@@ -750,7 +750,7 @@ mod tests {
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01.toml",
+			"--config", "tests/test-files/config01.toml",
 			"--per-file-panels",
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
@@ -759,14 +759,14 @@ mod tests {
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01-with-per-file-panel.toml"
+			"--config", "tests/test-files/config01-with-per-file-panel.toml"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		assert!(ctx.per_file_panels());
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01-with-per-file-panel.toml",
+			"--config", "tests/test-files/config01-with-per-file-panel.toml",
 			"--per-file-panels", "false"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
@@ -774,14 +774,14 @@ mod tests {
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01-with-timestamp-format.toml"
+			"--config", "tests/test-files/config01-with-timestamp-format.toml"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		assert_eq!(*ctx.timestamp_format(), TimestampFormat::from("%s"));
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01-with-timestamp-format.toml",
+			"--config", "tests/test-files/config01-with-timestamp-format.toml",
 			"--timestamp-format", "%j %I:%M:%S %p"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
@@ -789,7 +789,7 @@ mod tests {
 
 		#[rustfmt::skip]
 		let input = vec![
-			"--config", "test-files/config01-with-timestamp-format-with-per-file-panel.toml",
+			"--config", "tests/test-files/config01-with-timestamp-format-with-per-file-panel.toml",
 			"--per-file-panels", "false",
 			"--timestamp-format", "%j %I:%M:%S %p"
 		];
@@ -801,7 +801,7 @@ mod tests {
 	#[test]
 	#[should_panic(expected = "unknown field")]
 	fn test_bad_config_file() {
-		let input = vec!["--config", "test-files/invalid-config.toml"];
+		let input = vec!["--config", "tests/test-files/invalid-config.toml"];
 		let res = graph_cli_builder::build_from_cli_args(input);
 		if res.is_err() {
 			panic!("{:?}", res.err());

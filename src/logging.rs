@@ -7,12 +7,11 @@ use crate::process_log::MATCH_PREVIEW;
 /// Tracing target for verbose (-v -vv -vvv) cross-application messages.
 pub const APPV: &str = "appverbose";
 
-#[cfg(test)]
-pub(crate) fn init_tracing_test() {
+pub fn init_tracing_test() {
 	use std::sync::Once;
 	static INIT: Once = Once::new();
 	INIT.call_once(|| {
-		init_tracing(false, 0);
+		init_tracing(true, 0);
 	});
 }
 

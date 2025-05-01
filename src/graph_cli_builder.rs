@@ -700,7 +700,7 @@ mod tests {
 	fn test_01() {
 		check_ok(
 			vec!["--plot", "c1", "d"],
-			"test-files/config01.toml",
+			"tests/test-files/config01.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -716,7 +716,7 @@ mod tests {
 	fn test_02() {
 		check_ok(
 			vec!["--event-count", "d"],
-			"test-files/config02.toml",
+			"tests/test-files/config02.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -729,7 +729,7 @@ mod tests {
 	fn test_03() {
 		check_ok(
 			vec!["--event-count", "c1", "d"],
-			"test-files/config03.toml",
+			"tests/test-files/config03.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -745,7 +745,7 @@ mod tests {
 	fn test_04() {
 		check_ok(
 			vec!["--event", "d", "101.1"],
-			"test-files/config04.toml",
+			"tests/test-files/config04.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -761,7 +761,7 @@ mod tests {
 	fn test_05() {
 		check_ok(
 			vec!["--event", "c1", "d", "101.1"],
-			"test-files/config05.toml",
+			"tests/test-files/config05.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -777,7 +777,7 @@ mod tests {
 	fn test_06() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--plot", "xxx"],
-			"test-files/config06.toml",
+			"tests/test-files/config06.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -799,7 +799,7 @@ mod tests {
 				"--plot", "1", "--panel", "--plot", "2", "--panel", "--plot", "3", "--panel",
 				"--plot", "4",
 			],
-			"test-files/config07.toml",
+			"tests/test-files/config07.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -828,7 +828,7 @@ mod tests {
 				"2", "--panel", "--plot", "3", "--plot", "4", "B", "--panel", "--plot", "5",
 				"--plot", "6",
 			],
-			"test-files/config08.toml",
+			"tests/test-files/config08.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -877,7 +877,7 @@ mod tests {
 	fn test_09() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--plot", "x", "y", "--panel", "--plot", "e"],
-			"test-files/config09.toml",
+			"tests/test-files/config09.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -903,7 +903,7 @@ mod tests {
 	fn test_10() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--line-color", "red"],
-			"test-files/config10.toml",
+			"tests/test-files/config10.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -920,7 +920,7 @@ mod tests {
 	fn test_11() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--line-color", "red", "--file-id", "12"],
-			"test-files/config11.toml",
+			"tests/test-files/config11.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -953,7 +953,7 @@ mod tests {
 				"--marker-color",
 				"blue",
 			],
-			"test-files/config12.toml",
+			"tests/test-files/config12.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -987,7 +987,7 @@ mod tests {
 				"duration",
 				"666.0",
 			],
-			"test-files/config13.toml",
+			"tests/test-files/config13.toml",
 			GraphConfigBuilder::new()
 				.with_panel(
 					PanelBuilder::new()
@@ -1055,7 +1055,7 @@ mod tests {
 		init_tracing_test();
 		check_ok(
 			test_14_input(),
-			"test-files/config14.toml",
+			"tests/test-files/config14.toml",
 			GraphConfigBuilder::new()
 				.with_panel(
 					PanelBuilder::new()

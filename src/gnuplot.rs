@@ -231,12 +231,15 @@ pub fn write_gnuplot_script(
 			gpwr!(file, "set xrange [\"{}\":\"{}\"]", start.format(format), end.format(format))?;
 		}
 
-		gpwr!(file, "plot \\")?;
 		for (j, line) in panel.lines.iter().enumerate() {
 			let csv_data_path = line
 				.shared_csv_filename()
 				.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
+			gpwr!(file, "csv_data_file_{j:04} = '{}'", csv_data_path.display())?;
+		}
 
+		gpwr!(file, "plot \\")?;
+		for (j, line) in panel.lines.iter().enumerate() {
 			// build style parts
 			let mut style_parts: Vec<String> = Vec::new();
 
@@ -281,8 +284,7 @@ pub fn write_gnuplot_script(
 
 			write!(
 				file,
-				"   '{}' using (combine_datetime('date','time')):'{}' {} title '{}'",
-				csv_data_path.display(),
+				"   csv_data_file_{j:04} using (combine_datetime('date','time')):'{}' {} title '{}'",
 				line.csv_data_column_for_plot(),
 				style,
 				line.title(has_multiple_input_files),
@@ -322,13 +324,13 @@ pub fn run_gnuplot(
 		return Ok(());
 	}
 
-	const GNUPLOT: &str = "gnuplot";
+	const GNUPLOT_CMD: &str = "gnuplot";
 
-	Command::new(GNUPLOT)
+	Command::new(GNUPLOT_CMD)
 		.output()
-		.map_err(|e| Error::GnuplotCommandNotAvailable(GNUPLOT.into(), e))?;
+		.map_err(|e| Error::GnuplotCommandNotAvailable(GNUPLOT_CMD.into(), e))?;
 
-	let output = Command::new(GNUPLOT).arg(&script_path).output()?;
+	let output = Command::new(GNUPLOT_CMD).arg(&script_path).output()?;
 
 	if !output.status.success() {
 		return Err(Error::GnuplotNonZeroExitCode(

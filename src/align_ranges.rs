@@ -617,7 +617,7 @@ mod tests {
 			"dummy".into(),
 		);
 
-		line.set_shared_csv_filename(&PathBuf::from("./test-files/some-data.csv"));
+		line.set_shared_csv_filename(&PathBuf::from("./tests/test-files/some-data.csv"));
 		let mut config = build_resolved_graph_config(vec![line]);
 		config.populate_line_ranges().unwrap();
 

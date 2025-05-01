@@ -27,8 +27,8 @@ For some examples refer to [sample gallery](./SAMPLE.md).
 
 ```rust,ignore
 plox graph \
-	  --input  some-playground/some.log \
-	  --output some-playground/panels.png \
+	  --input  tests/examples/some.log \
+	  --output tests/examples/panels.png \
 	  --timestamp-format "[%s]" \
 	  --plot om_module x \
 	  --panel \
@@ -41,7 +41,7 @@ plox graph \
 
 ```
 
-<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/readme_examples/some-playground/panels.png" width="800" />
+<img src="tests/examples/panels.png" width="800" />
 
 For more examples refer to [sample gallery](./SAMPLE.md).
 
