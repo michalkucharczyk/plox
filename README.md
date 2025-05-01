@@ -6,7 +6,7 @@ You give it logs. It gives you a graph.
 
 Turn timestamped logs into clean plots.  Extract numeric values from log files and plot them over time. Fully CLI-driven. Regex-based. Configurable.
 
-For some examples refer to [sample gallery](./SAMPLE.md).
+For some examples refer to [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
 
 ## ✨ Features
 
@@ -41,19 +41,23 @@ plox graph \
 
 ```
 
-<img src="tests/examples/panels.png" width="800" />
+<img src="https://github.com/michalkucharczyk/plox/blob/master/tests/examples/panels.png" width="800" />
 
-For more examples refer to [sample gallery](./SAMPLE.md).
+For more examples refer to [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
 
 ---
 
 ## 📦 Install
 
 ```sh
+cargo install plox
+```
+or
+```sh
 git clone git@github.com:michalkucharczyk/plox.git
 cd plox
 cargo build --release
-# copy ./target/release/plox to your local user bin 
+# use ./target/release/plox 
 ```
 
 `gnuplot` is required for rendering PNGs — install it via your system package manager.
