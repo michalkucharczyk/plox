@@ -2,10 +2,9 @@
 //! These tests run real commands with sample inputs and check that the outputs are correct.
 //! Also serves as live examples which are directly inluded into SAMPLE.md file.
 
-use cmd_lib::{run_cmd, spawn_with_output};
+use cmd_lib::spawn_with_output;
 use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 
 // Used for running commands visually pleasing in doc tests.
 macro_rules! bash(
@@ -26,7 +25,7 @@ macro_rules! bash(
 			.wait_with_pipe(&mut |pipe| {
 				BufReader::new(pipe)
 					.lines()
-					.filter_map(|line| line.ok())
+					.map_while(Result::ok)
 					.for_each(|line| tracing::error!("{}", line));
 				}).unwrap();
 			panic!("Execution of plox failed.");
