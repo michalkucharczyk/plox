@@ -1,3 +1,9 @@
+//! This module handles the creation of gnuplot scripts and graph images.
+//!
+//! It generates scripts for gnuplot to produce visual representations based on
+//! resolved configurations and parsed data. Additionally, it manages the execution
+//! of gnuplot and the saving of resulting graph images.
+
 use crate::{
 	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
 	logging::APPV,
@@ -177,6 +183,7 @@ pub fn write_gnuplot_script(
 	gpwr!(file, "set format x '%H:%M:%S'")?;
 	gpwr!(file, "set mxtics 10")?;
 	gpwr!(file, "set grid xtics mxtics")?;
+	gpwr!(file, "set grid ytics mytics")?;
 	gpwr!(file, "set ytics nomirror")?;
 	gpwr!(file, "set key noenhanced")?;
 	gpwr!(file, "set multiplot")?;
@@ -224,12 +231,15 @@ pub fn write_gnuplot_script(
 			gpwr!(file, "set xrange [\"{}\":\"{}\"]", start.format(format), end.format(format))?;
 		}
 
-		gpwr!(file, "plot \\")?;
 		for (j, line) in panel.lines.iter().enumerate() {
 			let csv_data_path = line
 				.shared_csv_filename()
 				.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
+			gpwr!(file, "csv_data_file_{j:04} = '{}'", csv_data_path.display())?;
+		}
 
+		gpwr!(file, "plot \\")?;
+		for (j, line) in panel.lines.iter().enumerate() {
 			// build style parts
 			let mut style_parts: Vec<String> = Vec::new();
 
@@ -274,8 +284,7 @@ pub fn write_gnuplot_script(
 
 			write!(
 				file,
-				"   '{}' using (combine_datetime('date','time')):'{}' {} title '{}'",
-				csv_data_path.display(),
+				"   csv_data_file_{j:04} using (combine_datetime('date','time')):'{}' {} title '{}'",
 				line.csv_data_column_for_plot(),
 				style,
 				line.title(has_multiple_input_files),
@@ -308,14 +317,20 @@ pub fn run_gnuplot(
 	let (image_path, script_path) = context.get_graph_output_path();
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;
+	info!(target:APPV,"Script saved: {}", script_path.display());
 
-	const GNUPLOT: &str = "gnuplot";
+	if std::env::var("PLOX_SKIP_GNUPLOT").is_ok() {
+		info!(target:APPV, "PLOX_SKIP_GNUPLOT is set, skipping gnuplot execution and image generation.");
+		return Ok(());
+	}
 
-	Command::new(GNUPLOT)
+	const GNUPLOT_CMD: &str = "gnuplot";
+
+	Command::new(GNUPLOT_CMD)
 		.output()
-		.map_err(|e| Error::GnuplotCommandNotAvailable(GNUPLOT.into(), e))?;
+		.map_err(|e| Error::GnuplotCommandNotAvailable(GNUPLOT_CMD.into(), e))?;
 
-	let output = Command::new(GNUPLOT).arg(&script_path).output()?;
+	let output = Command::new(GNUPLOT_CMD).arg(&script_path).output()?;
 
 	if !output.status.success() {
 		return Err(Error::GnuplotNonZeroExitCode(
@@ -325,7 +340,6 @@ pub fn run_gnuplot(
 		));
 	}
 
-	info!(target:APPV,"Script saved: {}", script_path.display());
 	info!(target:APPV,"Image  saved: {}", image_path.display());
 
 	if !output.stdout.is_empty() {

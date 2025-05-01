@@ -1,4 +1,10 @@
-use crate::graph_config::*;
+//! Builds the command-line argument structure specifically for the 'graph' subcommand.
+//! This module defines the various flags, options, and arguments that control how graphs are generated.
+//!
+//! This complex logic here is necessary because Clap alone cannot support ordered, repeated, multi-flag patterns
+//! like: `--plot ... --panel --event ... --plot ...`.  
+
+use crate::{data_source_cli_builder::build_data_source_cli, graph_config::*};
 use clap::{
 	Arg, ArgAction, ArgMatches, Command, CommandFactory, FromArgMatches, Parser, ValueEnum,
 	value_parser,
@@ -24,6 +30,8 @@ pub enum Error {
 	ParseFloatError(#[from] ParseFloatError),
 	#[error("CLI parsing error: {0}")]
 	GeneralCliParseError(String),
+	#[error("CLI parsing error: {0}")]
+	GraphCliParseError(#[from] crate::data_source_cli_builder::Error),
 	#[error("Unknown panel param {0:?}")]
 	UnknownPanelParam(String),
 	#[error("Invalid line source {0:?}")]
@@ -61,102 +69,6 @@ impl GraphConfigWithContext {
 			let r = annotate_toml_error(&e, &content, &path.display().to_string());
 			error!("{r}");
 			e.into()
-		})
-	}
-}
-
-impl DataSource {
-	//clenaup this mess
-	const CLI_NAME_PLOT_FIELD: &str = "plot";
-	const CLI_NAME_EVENT: &str = "event";
-	const CLI_NAME_EVENT_COUNT: &str = "event-count";
-	const CLI_NAME_EVENT_DELTA: &str = "event-delta";
-
-	pub fn get_cli_ids() -> Vec<String> {
-		DummyDataSourceSubcommand::command()
-			.get_subcommands()
-			.map(|sc| sc.get_name().to_string().clone())
-			.collect()
-	}
-}
-
-impl DataSource {
-	// note:
-	// we cannot use TypedValueParser (what would be cute) for DataSource because parse_ref is only
-	// receiving a single parameter from: '--plot x y' invocation (by desing in clap), so we cannot
-	// build a right instance.
-	//
-	// This could be worked around by specifying '--plot "x y"' but it is not convinient.
-	// So manual parsing is required.
-	pub fn try_from_flag(id: &str, val: &[&String]) -> Result<Self, Error> {
-		Ok(match id {
-			Self::CLI_NAME_EVENT => match val.len() {
-				2 => DataSource::EventValue {
-					guard: None,
-					pattern: val[0].to_string(),
-					yvalue: val[1].parse::<f64>()?,
-				},
-				3 => DataSource::EventValue {
-					guard: Some(val[0].to_string()),
-					pattern: val[1].to_string(),
-					yvalue: val[2].parse::<f64>()?,
-				},
-				_ => {
-					return Err(Error::GeneralCliParseError(format!(
-						"Bad parameter count ({}) for {}. This is bug.",
-						val.len(),
-						id
-					)));
-				},
-			},
-			Self::CLI_NAME_PLOT_FIELD => match val.len() {
-				1 => DataSource::FieldValue { guard: None, field: val[0].to_string() },
-				2 => DataSource::FieldValue {
-					guard: Some(val[0].to_string()),
-					field: val[1].to_string(),
-				},
-				_ => {
-					return Err(Error::GeneralCliParseError(format!(
-						"Bad parameter count ({}) for {}. This is bug.",
-						val.len(),
-						id
-					)));
-				},
-			},
-			Self::CLI_NAME_EVENT_COUNT => match val.len() {
-				1 => DataSource::EventCount { guard: None, pattern: val[0].to_string() },
-				2 => DataSource::EventCount {
-					guard: Some(val[0].to_string()),
-					pattern: val[1].to_string(),
-				},
-				_ => {
-					return Err(Error::GeneralCliParseError(format!(
-						"Bad parameter count ({}) for {}. This is bug.",
-						val.len(),
-						id
-					)));
-				},
-			},
-			Self::CLI_NAME_EVENT_DELTA => match val.len() {
-				1 => DataSource::EventDelta { guard: None, pattern: val[0].to_string() },
-				2 => DataSource::EventDelta {
-					guard: Some(val[0].to_string()),
-					pattern: val[1].to_string(),
-				},
-				_ => {
-					return Err(Error::GeneralCliParseError(format!(
-						"Bad parameter count ({}) for {}. This is bug.",
-						val.len(),
-						id
-					)));
-				},
-			},
-			_ => {
-				return Err(Error::GeneralCliParseError(format!(
-					"Unknown DataSource id:{}. This is bug",
-					id
-				)));
-			},
 		})
 	}
 }
@@ -537,74 +449,6 @@ impl GraphConfig {
 	}
 }
 
-fn extract_help_multiline(args: &[Arg]) -> String {
-	args.iter()
-		.filter_map(|arg| {
-			arg.get_long_help()
-				.or(arg.get_help())
-				.map(|h| format!("  <{}>: {}", arg.get_id(), h))
-		})
-		.collect::<Vec<_>>()
-		.join("\n")
-}
-
-fn extract_num_args_and_names(args: &[Arg]) -> (usize, usize, Vec<String>) {
-	let mut value_names = vec![];
-	let mut required_count = 0;
-
-	for a in args {
-		value_names.push(a.get_id().to_string());
-		if a.is_required_set() {
-			required_count += 1;
-		}
-	}
-
-	let total = args.len();
-	(required_count, total, value_names)
-}
-
-/// Build args from subcommands' parameters and append to given base command
-fn build_data_source_cli(mut base: Command) -> Command {
-	let dummy_data_source_subcommand = DummyDataSourceSubcommand::command();
-	for sub in dummy_data_source_subcommand.get_subcommands() {
-		let sub_name = sub.get_name().to_string();
-		let sub_args: Vec<Arg> = sub.get_arguments().cloned().collect();
-		let sub_help = sub.get_about().unwrap_or_default();
-		let field_help = extract_help_multiline(&sub_args);
-		let (min_args, max_args, value_names) = extract_num_args_and_names(&sub_args);
-
-		let full_help = if field_help.is_empty() {
-			sub_help.to_string()
-		} else {
-			format!("{sub_help}\n{field_help}\n")
-		};
-
-		let flag = Arg::new(sub_name.clone())
-			.long(&sub_name)
-			.num_args(min_args..=max_args)
-			.action(ArgAction::Append)
-			.value_names(&value_names)
-			.help(sub_help.to_string())
-			.long_help(full_help)
-			.next_line_help(true)
-			.help_heading("Data sources - plotted line types");
-
-		base = base.arg(flag);
-	}
-
-	base
-}
-
-/// Dummy helper wrapper for `CommandFactory`
-///
-/// Used for injecting DataSource args and their parameters.
-#[derive(Parser, Debug)]
-#[command(name = "dummy")]
-struct DummyDataSourceSubcommand {
-	#[command(subcommand)]
-	line: DataSource,
-}
-
 /// Dummy helper wrapper for `CommandFactory`
 ///
 /// Used for injecting line parameters args.
@@ -856,7 +700,7 @@ mod tests {
 	fn test_01() {
 		check_ok(
 			vec!["--plot", "c1", "d"],
-			"test-files/config01.toml",
+			"tests/test-files/config01.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -872,7 +716,7 @@ mod tests {
 	fn test_02() {
 		check_ok(
 			vec!["--event-count", "d"],
-			"test-files/config02.toml",
+			"tests/test-files/config02.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -885,7 +729,7 @@ mod tests {
 	fn test_03() {
 		check_ok(
 			vec!["--event-count", "c1", "d"],
-			"test-files/config03.toml",
+			"tests/test-files/config03.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -901,7 +745,7 @@ mod tests {
 	fn test_04() {
 		check_ok(
 			vec!["--event", "d", "101.1"],
-			"test-files/config04.toml",
+			"tests/test-files/config04.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -917,7 +761,7 @@ mod tests {
 	fn test_05() {
 		check_ok(
 			vec!["--event", "c1", "d", "101.1"],
-			"test-files/config05.toml",
+			"tests/test-files/config05.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -933,7 +777,7 @@ mod tests {
 	fn test_06() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--plot", "xxx"],
-			"test-files/config06.toml",
+			"tests/test-files/config06.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -955,7 +799,7 @@ mod tests {
 				"--plot", "1", "--panel", "--plot", "2", "--panel", "--plot", "3", "--panel",
 				"--plot", "4",
 			],
-			"test-files/config07.toml",
+			"tests/test-files/config07.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -984,7 +828,7 @@ mod tests {
 				"2", "--panel", "--plot", "3", "--plot", "4", "B", "--panel", "--plot", "5",
 				"--plot", "6",
 			],
-			"test-files/config08.toml",
+			"tests/test-files/config08.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -1033,7 +877,7 @@ mod tests {
 	fn test_09() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--plot", "x", "y", "--panel", "--plot", "e"],
-			"test-files/config09.toml",
+			"tests/test-files/config09.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -1059,7 +903,7 @@ mod tests {
 	fn test_10() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--line-color", "red"],
-			"test-files/config10.toml",
+			"tests/test-files/config10.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -1076,7 +920,7 @@ mod tests {
 	fn test_11() {
 		check_ok(
 			vec!["--plot", "c1", "d", "--line-color", "red", "--file-id", "12"],
-			"test-files/config11.toml",
+			"tests/test-files/config11.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -1109,7 +953,7 @@ mod tests {
 				"--marker-color",
 				"blue",
 			],
-			"test-files/config12.toml",
+			"tests/test-files/config12.toml",
 			GraphConfigBuilder::new()
 				.with_default_panel()
 				.with_line(
@@ -1143,7 +987,7 @@ mod tests {
 				"duration",
 				"666.0",
 			],
-			"test-files/config13.toml",
+			"tests/test-files/config13.toml",
 			GraphConfigBuilder::new()
 				.with_panel(
 					PanelBuilder::new()
@@ -1211,7 +1055,7 @@ mod tests {
 		init_tracing_test();
 		check_ok(
 			test_14_input(),
-			"test-files/config14.toml",
+			"tests/test-files/config14.toml",
 			GraphConfigBuilder::new()
 				.with_panel(
 					PanelBuilder::new()

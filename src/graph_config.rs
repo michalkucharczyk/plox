@@ -1,4 +1,8 @@
-//! Intermediate Declaration of the graph config. Structures that are user-facing, raw input.
+//! User facing declaration of the graph config.
+//!
+//! Definition of structures representing graph configurations as written by users, raw input.
+//! These configs, usually written in TOML (or provided as CLI options), describe panels, fields, and layout choices.
+//! This module handles parsing them into Rust types and preparing them for further processing.
 
 use crate::error::Error;
 use annotate_snippets::{Level, Renderer, Snippet};
@@ -203,7 +207,7 @@ pub struct SharedGraphContext {
 	///
 	/// Conflicts with `--panel-alignment-mode`, and implies global alignment.
 	#[arg(
-		long = "time_range",
+		long,
 		value_parser = TimeRangeArg::parse_time_range,
 		conflicts_with = "panel_alignment_mode",
 		help_heading = "Panels layout"
@@ -640,10 +644,16 @@ pub enum PanelRangeMode {
 /// consistent alignment (e.g. for side-by-side comparison).
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub enum PanelAlignmentMode {
+	/// Align all panels using the **full combined** time range from all data.
+	///
+	/// Ensures that the time axis covers the entire time span of all lines,
+	/// even if some panels have sparse data.
+	#[default]
+	SharedFull,
+
 	/// Use each panel's own computed time range.
 	///
 	/// No alignment is applied — panels may have different time axes.
-	#[default]
 	PerPanel,
 
 	/// Align all panels using the **overlapping** portion of their time ranges.
@@ -651,12 +661,6 @@ pub enum PanelAlignmentMode {
 	/// Useful for comparing synchronized events across sources.
 	/// If there is no overlap, no alignment is applied.
 	SharedOverlap,
-
-	/// Align all panels using the **full combined** time range from all data.
-	///
-	/// Ensures that the time axis covers the entire time span of all lines,
-	/// even if some panels have sparse data.
-	SharedFull,
 
 	/// Use a fixed time range explicitly provided via `--time-range`.
 	///
@@ -668,9 +672,9 @@ pub enum PanelAlignmentMode {
 #[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub enum PanelAlignmentModeArg {
 	#[default]
+	SharedFull,
 	PerPanel,
 	SharedOverlap,
-	SharedFull,
 }
 
 /// Represents a user-defined time range override provided via `--time-range`.

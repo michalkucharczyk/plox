@@ -25,21 +25,7 @@ For some examples refer to [sample gallery](./SAMPLE.md).
 
 ## 🧪 Example
 
-```rust,ignore
-plox graph \
-	  --input  tests/examples/some.log \
-	  --output tests/examples/panels.png \
-	  --timestamp-format "[%s]" \
-	  --plot om_module x \
-	  --panel \
-	  --plot x_module x01 \
-	  --plot x_module x02 \
-	  --plot x_module x03 \
-	  --panel \
-	  --event-count foo_module SOME_EVENT \
-	  --event foo_module SOME_EVENT 1.0 --yaxis y2 --style points
-
-```
+<!-- docify::embed!("tests/cmd_tests.rs", cmd_simple_panels) -->
 
 <img src="tests/examples/panels.png" width="800" />
 

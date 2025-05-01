@@ -1,3 +1,6 @@
+//! This tiny module defines the overall command-line interface for plox.
+//! It sets up the top-level argument parser, wires in the subcommands, and handles user input.
+
 use clap::{Args, CommandFactory, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
