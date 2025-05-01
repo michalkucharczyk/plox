@@ -575,17 +575,44 @@ Supports:
 		);
 	let after_help: &'static str = color_print::cstr!(
 		r#"
+<bold><underline>Line matching:</underline></bold>
+- Firstly, if an expression is provided by the user, the guard is used to quickly filter out non-matching lines by comparing it with the line using strcmp.
+- Secondly, the timestamp pattern is used to extract the timestamp.
+- Thirdly, the field/pattern regex is applied.
+
+Try `plox match-preview --verbose` to debug matching issues.
+
+<bold><underline>Timestamp format:</underline></bold>
+The tool is designed to parse timestamped logs. The timestamp format used in the log file shall be passed as the `--timestamp-format` parameter.
+
+For the the exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+
+<underline>Examples</underline>:
+- "2025-04-03 11:32:48.027"  | "%Y-%m-%d %H:%M:%S%.3f"
+- "08:26:13 AM"              | "%I:%M:%S %p"
+- "2025 035 08:26:13 AM"     | "%Y %j %I:%M:%S %p"
+- "035 08:26:13 AM"          | "%j %I:%M:%S %p"
+- "[1577834199]"             | "[%s]"
+- "1577834199"               | "%s"
+- "Apr 20 08:26:13 AM"       | "%b %d %I:%M:%S %p"
+- "[100.333]"                | not supported...
+
 <bold><underline>Field regex:</underline></bold>
 Regex pattern shall contain a single capture group for matching value only, or two
 capture groups for matching value and unit.
+
+Currently only time-related units are implemented (s,ms,us,ns) and all values are converted to miliseconds.
+If catpure group for units is not provided, no conversion is made.
 
 Regex pattern does not match the timestamp. Timestamp will be striped and the remainder
 for the log line will matched against regex.
 
 <underline>Examples</underline>:
-- <bold>"duration"</bold>                       - matches "5s" in "duration=5s"
-- <bold>"duration:([\d\.]+)(\w+)?"</bold>       - matches "5s" in log: "duration:5s"
-- <bold>"^\s+(?:[\d\.]+\s+){3}([\d\.]+)"</bold> - matches 4th column (whitespace separated)
+- "duration"                       | matches "5s" in "duration=5s"
+- "\bduration:([\d\.]+)(\w+)?"     | matches "5s" in log: "duration:5s"
+- "\bvalue:([\d\.]+)?"             | matches "75" in log: "value:75" (no units)
+- "^\s+(?:[\d\.]+\s+){3}([\d\.]+)" | matches 4th column (whitespace separated)
+- "txs=\(\d+,\s+(\d+)\)"           | matches '124' in "txs=(99,124)
 "#
 	);
 	graph_config_cli.after_long_help(after_help)

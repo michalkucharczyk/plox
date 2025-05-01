@@ -17,7 +17,7 @@ use std::{
 	path::{Path, PathBuf},
 	time::UNIX_EPOCH,
 };
-use tracing::{Level, debug, info, trace};
+use tracing::{Level, debug, info, trace, warn};
 use tracing_subscriber::{EnvFilter, Layer, Registry, fmt, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
@@ -39,6 +39,9 @@ pub enum Error {
 
 	#[error("User provided time range parsing error: {0}")]
 	TimeRangeParsingError(#[from] ParseError),
+
+	#[error("Timestamp extraction failed: file:'{0}' format:'{1:?}', line:'{2}' ")]
+	TimestampExtractionFailure(PathBuf, TimestampFormat, String),
 }
 
 impl Error {
@@ -72,6 +75,8 @@ struct LineProcessor {
 	pub records: Vec<LogRecord>,
 	pub output_path: Option<PathBuf>,
 	pub timestamp_format: TimestampFormat,
+	timestamp_extraction_failure_count: usize,
+	input_file_name: PathBuf,
 }
 
 impl LineProcessor {
@@ -79,6 +84,7 @@ impl LineProcessor {
 		data_source: DataSource,
 		output_path: Option<PathBuf>,
 		timestamp_format: TimestampFormat,
+		input_file_name: PathBuf,
 	) -> Result<Self, Error> {
 		let regex = data_source.compile_regex()?;
 		Ok(Self {
@@ -88,6 +94,8 @@ impl LineProcessor {
 			timestamp_format,
 			state: ProcessingState::new(),
 			records: Vec::new(),
+			timestamp_extraction_failure_count: 0,
+			input_file_name,
 		})
 	}
 
@@ -105,14 +113,31 @@ impl LineProcessor {
 		result
 	}
 
+	fn handle_timestamp_extraction_failure(&mut self, line: &str) -> Result<(), Error> {
+		self.timestamp_extraction_failure_count += 1;
+
+		if self.timestamp_extraction_failure_count > 3 {
+			warn!(target:APPV, log_line = line,
+				timestamp_format=?self.timestamp_format,
+				"Timestamp extraction failed for {} lines. Exiting.", self.timestamp_extraction_failure_count);
+			Err(Error::TimestampExtractionFailure(
+				self.input_file_name.clone(),
+				self.timestamp_format.clone(),
+				line.to_string(),
+			))
+		} else {
+			Ok(())
+		}
+	}
+
 	pub fn guard_matches(&self, log_line: &str) -> bool {
 		self.data_source.guard().as_ref().map(|g| log_line.contains(g)).unwrap_or(true)
 	}
 
 	pub fn try_match<'a>(
-		&self,
+		&mut self,
 		line: &'a str,
-	) -> (bool, Option<(regex::Captures<'a>, ExtractedNaiveDateTime)>) {
+	) -> Result<(bool, Option<(regex::Captures<'a>, ExtractedNaiveDateTime)>), Error> {
 		if self.guard_matches(line) {
 			if tracing::event_enabled!(target:MATCH_PREVIEW, Level::TRACE) {
 				trace!(target:MATCH_PREVIEW, "try_match: line:\"{line}\"");
@@ -138,12 +163,13 @@ impl LineProcessor {
 					}
 				}
 
-				(true, captures)
+				Ok((true, captures))
 			} else {
-				(true, None)
+				self.handle_timestamp_extraction_failure(line)?;
+				Ok((true, None))
 			}
 		} else {
-			(false, None)
+			Ok((false, None))
 		}
 	}
 
@@ -290,6 +316,10 @@ impl DataSource {
 		}
 	}
 
+	/// Checks if regex pattern is valid.
+	///
+	/// For [`DataSource::FieldValue`] it checks if regex pattern contains a correct number of captures groups.
+	/// Otherwise no validation is performed and any pattern is assumed to be correct.
 	fn validate_field_regex(&self) -> Result<bool, Error> {
 		if let DataSource::FieldValue { field, .. } = &self {
 			if let Ok(regex) = Regex::new(field) {
@@ -309,6 +339,7 @@ impl DataSource {
 		self.validate_field_regex().unwrap_or(false)
 	}
 
+	/// Returns actual regex pattern that will be used for matching events and extracting values.
 	fn regex_pattern(&self) -> String {
 		match &self {
 			DataSource::EventValue { pattern, .. }
@@ -318,7 +349,7 @@ impl DataSource {
 				if self.is_field_valid_regex() {
 					field.clone()
 				} else {
-					format!(r"{}=([\d\.]+)(\w+)?", regex::escape(field))
+					format!(r"\b{}=([\d\.]+)(\w+)?", regex::escape(field))
 				}
 			},
 		}
@@ -506,6 +537,7 @@ pub fn process_inputs(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
 				shared_context.timestamp_format().clone(),
+				canonical_line.source_file_name().clone(),
 			)?;
 
 			processors
@@ -528,21 +560,32 @@ pub fn process_inputs(
 		let reader = BufReader::new(input_file);
 		for line in reader.lines().map_while(Result::ok) {
 			for processor in &mut processors.values_mut() {
-				if let (_, Some((captures, timestamp))) = processor.try_match(&line) {
+				if let (_, Some((captures, timestamp))) = processor.try_match(&line)? {
 					processor.process(captures, timestamp);
 				}
 			}
 		}
 		// Write all output files
 		for (_, processor) in processors {
-			debug!(
-				target:APPV,
-				"Processed input file: {}, regex: {}, matched {}, cache file: {}",
-				log_file_name.display(),
-				processor.data_source.regex_pattern(),
-				processor.records.len(),
-				processor.expect_output_path().display()
-			);
+			assert_eq!(log_file_name, processor.input_file_name);
+			if processor.records.len() == 0 {
+				warn!(
+					target:APPV,
+					input_file = ?log_file_name.display(),
+					guard = ?processor.data_source.guard(),
+					regex = processor.data_source.regex_pattern(),
+					"No matches."
+				);
+			} else {
+				debug!(
+					target:APPV,
+					"Processed input file: {}, regex: {}, matched {}, cache file: {}",
+					log_file_name.display(),
+					processor.data_source.regex_pattern(),
+					processor.records.len(),
+					processor.expect_output_path().display()
+				);
+			}
 			processor.write_csv()?;
 		}
 	}
@@ -578,6 +621,7 @@ pub fn regex_match_preview_inner(
 		config.data_source.clone(),
 		None,
 		context.timestamp_format().clone(),
+		context.input.clone(),
 	)?;
 
 	let input_file =
@@ -593,7 +637,7 @@ pub fn regex_match_preview_inner(
 	info!(target:MATCH_PREVIEW, "timestamp pattern: {:?}", context.timestamp_format);
 
 	for line in reader.lines().map_while(Result::ok) {
-		let (guard_matched, captured) = processor.try_match(&line);
+		let (guard_matched, captured) = processor.try_match(&line)?;
 		if guard_matched {
 			if let Some((captures, timestamp)) = captured {
 				processor.process(captures, timestamp);
@@ -609,8 +653,8 @@ pub fn regex_match_preview_inner(
 
 	if matched_count == 0 {
 		if let Some(guard) = config.data_source.guard() {
-			info!(target:APPV, "No lines matched agains guard: '{:?}'", guard);
-			info!(target:APPV, "Is it correctly configured?");
+			warn!(target:MATCH_PREVIEW, "No lines matched against guard: '{:?}'", guard);
+			warn!(target:MATCH_PREVIEW, "Is it correctly configured?");
 		}
 	}
 	Ok(())
@@ -804,12 +848,12 @@ impl SharedGraphContext {
 	///
 	/// If a global `--cache-dir` is provided, the full canonical path of the log file is
 	/// reproduced as a subdirectory inside it. For example:
-	///   log: `/var/log/app/debug.log`  
-	///   cache-dir: `~/.cache/plox`  
+	///   log: `/var/log/app/debug.log`
+	///   cache-dir: `~/.cache/plox`
 	///   result: `~/.cache/plox/var/log/app/`
 	///
 	/// If no `--cache-dir` is given, a `.plox/` directory is created next to the log file:
-	///   log: `./logs/debug.log`  
+	///   log: `./logs/debug.log`
 	///   result: `./logs/.plox/`
 	///
 	/// The log file must exist and be canonicalizable; otherwise this function returns an error.
@@ -1159,11 +1203,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1185,11 +1230,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1219,11 +1265,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%b %d %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1252,11 +1299,47 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"[%s]".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
+		let (captures, timestamp) = matched.unwrap();
+		assert!(g);
+
+		let d = NaiveDate::from_ymd_opt(2019, 12, 31).unwrap();
+		let t = NaiveTime::from_hms_opt(23, 16, 39).unwrap();
+		assert_eq!(timestamp.date().unwrap(), d);
+		assert_eq!(timestamp.time(), t);
+
+		processor.process(captures, timestamp);
+
+		assert_eq!(processor.records.len(), 1);
+		let record = &processor.records[0];
+		assert_eq!(record.value, 3.17);
+		assert_eq!(record.count, 1);
+		assert_eq!(record.diff, None);
+	}
+
+	#[test]
+	#[ignore]
+	fn test_line_processing_date_format_seconds_since_epoch2() {
+		init_tracing_test();
+		let log_line = "[636152.333]  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
+		let resolved_line =
+			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
+
+		let mut processor = LineProcessor::from_data_source(
+			resolved_line.line.data_source,
+			Some(PathBuf::from("output.csv")),
+			"[%s.3f]".into(),
+			"input.log".into(),
+		)
+		.unwrap();
+
+		assert!(processor.guard_matches(log_line));
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1285,11 +1368,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1318,11 +1402,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1351,11 +1436,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1389,12 +1475,13 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		for log_line in log_lines {
 			assert!(processor.guard_matches(log_line));
-			let (g, matched) = processor.try_match(log_line);
+			let (g, matched) = processor.try_match(log_line).unwrap();
 			let (captures, timestamp) = matched.unwrap();
 			assert!(g);
 			processor.process(captures, timestamp);
@@ -1440,12 +1527,13 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		for log_line in log_lines {
 			assert!(processor.guard_matches(log_line));
-			let (g, matched) = processor.try_match(log_line);
+			let (g, matched) = processor.try_match(log_line).unwrap();
 			let (captures, timestamp) = matched.unwrap();
 			assert!(g);
 			processor.process(captures, timestamp);
@@ -1485,6 +1573,7 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap_err();
 

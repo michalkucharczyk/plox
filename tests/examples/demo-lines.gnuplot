@@ -38,17 +38,17 @@ set size 1.0,0.3283333333333333
 unset label
 unset logscale y
 set xrange ["2019-12-31T23:00:18":"2019-12-31T23:16:33"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x00', \
    csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x01', \
@@ -69,17 +69,17 @@ unset label
 set label 'Lines-points' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2019-12-31T23:00:18":"2019-12-31T23:16:33"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x00', \
    csv_data_file_0001 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x01', \
@@ -100,17 +100,17 @@ unset label
 set label 'Steps' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2019-12-31T23:00:18":"2019-12-31T23:16:33"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0003 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0004 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx04%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0005 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx05%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0006 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx06%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0007 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx07%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx08%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x00', \
    csv_data_file_0001 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x01', \

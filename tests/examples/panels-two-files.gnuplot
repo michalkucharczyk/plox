@@ -69,9 +69,9 @@ unset label
 set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x01 (default-other)', \
    csv_data_file_0001 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x02 (default-other)', \
@@ -84,9 +84,9 @@ unset label
 set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x01 (default)', \
    csv_data_file_0001 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x02 (default)', \
@@ -99,7 +99,7 @@ unset label
 set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__om_module__%5Cbx%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x (default-other)'
 unset y2tics
@@ -110,7 +110,7 @@ unset label
 set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__om_module__%5Cbx%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
    csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x (default)'
 unset y2tics

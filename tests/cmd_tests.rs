@@ -15,6 +15,7 @@ macro_rules! bash(
 			.wait_with_output();
 
 		if status.is_err() {
+			let mut output = vec![];
 			// cmd_lib limitation: we can either have status code or stdout/stderr captured.
 			// So let's re-run failed execution and print the output, so we know what failed.
 			tracing::error!("Execution failed, rerunning with output captured");
@@ -26,9 +27,12 @@ macro_rules! bash(
 				BufReader::new(pipe)
 					.lines()
 					.map_while(Result::ok)
-					.for_each(|line| tracing::error!("{}", line));
+					.for_each(|line| {
+						tracing::info!("{}", line);
+						output.push(line);
+					})
 				}).unwrap();
-			panic!("Execution of plox failed.");
+			panic!("Execution of plox failed. {}", output.join("\n"));
 		}
 
 		Default::default()
@@ -216,4 +220,20 @@ fn test_cmd_demo_lines_two_files() {
 	plox::logging::init_tracing_test();
 	cmd_demo_lines_two_files();
 	compare_files("demo-lines-two-files.gnuplot");
+}
+
+#[test]
+#[should_panic(expected = "Error occured when extracting timestamp")]
+fn test_cmd_bad_timestamp() {
+	bash!(
+		plox graph --input  tests/examples/bad_timestamps.log --plot om_module x
+	)
+}
+
+#[test]
+#[should_panic(expected = "No matches.")]
+fn test_cmd_bad_guard() {
+	bash!(
+		plox graph --input  tests/examples/default.log --plot nonexistingguard x -f
+	)
 }

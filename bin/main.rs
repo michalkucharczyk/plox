@@ -13,6 +13,24 @@ use tracing::{debug, error, info, trace};
 fn main() -> ExitCode {
 	match inner_main() {
 		Err(Error::TomlError(_)) => ExitCode::FAILURE,
+		Err(Error::LogProcessing(crate::process_log::Error::TimestampExtractionFailure(
+			file,
+			ts,
+			log,
+		))) => {
+			// error!("{:?}", e);
+			error!("Error occured when extracting timestamp from '{}' log file", file.display());
+			error!("Timestamp format given was: {ts:?}");
+			error!("Line that failed:\n{log}");
+			error!(
+				"Try `plox graph --help` and check out the timestamp format section for more details and examples."
+			);
+			error!("Try `plox match-preview --verbose` to debug matching problems.");
+			error!(
+				"For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>"
+			);
+			ExitCode::FAILURE
+		},
 		Err(e) => {
 			error!("{}", e);
 			ExitCode::FAILURE
