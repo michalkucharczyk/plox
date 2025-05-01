@@ -568,7 +568,7 @@ pub fn process_inputs(
 		// Write all output files
 		for (_, processor) in processors {
 			assert_eq!(log_file_name, processor.input_file_name);
-			if processor.records.len() == 0 {
+			if processor.records.is_empty() {
 				warn!(
 					target:APPV,
 					input_file = ?log_file_name.display(),
