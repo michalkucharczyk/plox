@@ -27,9 +27,9 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}    
     - name: Build
       run: cargo build --verbose
-    - name: Install gnuplot
-      run: sudo apt-get update && sudo apt-get install -y gnuplot  
     - name: Run tests
+      env:
+        PLOX_SKIP_GNUPLOT: '1'      
       run: cargo test --verbose
     - name: Install Clippy and Rustfmt
       run: |

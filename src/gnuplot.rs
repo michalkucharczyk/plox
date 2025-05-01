@@ -1,3 +1,9 @@
+//! This module handles the creation of gnuplot scripts and graph images.
+//!
+//! It generates scripts for gnuplot to produce visual representations based on
+//! resolved configurations and parsed data. Additionally, it manages the execution
+//! of gnuplot and the saving of resulting graph images.
+
 use crate::{
 	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
 	logging::APPV,
@@ -177,6 +183,7 @@ pub fn write_gnuplot_script(
 	gpwr!(file, "set format x '%H:%M:%S'")?;
 	gpwr!(file, "set mxtics 10")?;
 	gpwr!(file, "set grid xtics mxtics")?;
+	gpwr!(file, "set grid ytics mytics")?;
 	gpwr!(file, "set ytics nomirror")?;
 	gpwr!(file, "set key noenhanced")?;
 	gpwr!(file, "set multiplot")?;
@@ -308,6 +315,12 @@ pub fn run_gnuplot(
 	let (image_path, script_path) = context.get_graph_output_path();
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;
+	info!(target:APPV,"Script saved: {}", script_path.display());
+
+	if std::env::var("PLOX_SKIP_GNUPLOT").is_ok() {
+		info!(target:APPV, "PLOX_SKIP_GNUPLOT is set, skipping gnuplot execution and image generation.");
+		return Ok(());
+	}
 
 	const GNUPLOT: &str = "gnuplot";
 
@@ -325,7 +338,6 @@ pub fn run_gnuplot(
 		));
 	}
 
-	info!(target:APPV,"Script saved: {}", script_path.display());
 	info!(target:APPV,"Image  saved: {}", image_path.display());
 
 	if !output.stdout.is_empty() {
