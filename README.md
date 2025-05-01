@@ -41,7 +41,7 @@ plox graph \
 
 ```
 
-<img src="https://github.com/michalkucharczyk/plox/blob/master/tests/examples/panels.png" width="800" />
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/master/tests/examples/panels.png" width="800" />
 
 For more examples refer to [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
 
