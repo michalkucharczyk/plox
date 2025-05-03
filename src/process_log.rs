@@ -3,7 +3,9 @@
 //! It supports value extraction, event counting, deltas, and outputs intermediate CSV caches.
 
 use crate::{
-	graph_config::{DataSource, SharedGraphContext, TimestampFormat},
+	graph_config::{
+		DataSource, EventDeltaSpec, FieldCaptureSpec, InputFilesContext, TimestampFormat,
+	},
 	logging::APPV,
 	match_preview_cli_builder::{MatchPreviewConfig, SharedMatchPreviewContext},
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
@@ -254,8 +256,8 @@ impl ResolvedLine {
 		self.line.data_source.regex_filename_tag()
 	}
 
-	pub fn match_token(&self) -> String {
-		self.line.data_source.match_token()
+	pub fn raw_pattern(&self) -> String {
+		self.line.data_source.raw_pattern()
 	}
 
 	pub fn title(&self, multi_input_files: bool) -> String {
@@ -290,29 +292,21 @@ impl DataSource {
 
 	pub fn title(&self) -> String {
 		match &self {
-			DataSource::FieldValue { .. } => format!("value of {}", self.pattern()),
-			DataSource::EventValue { .. } => format!("presence of {}", self.pattern()),
-			DataSource::EventCount { .. } => format!("count of {}", self.pattern()),
-			DataSource::EventDelta { .. } => format!("delta {}", self.pattern()),
+			DataSource::FieldValue { .. } => format!("value of {}", self.raw_pattern()),
+			DataSource::EventValue { .. } => format!("presence of {}", self.raw_pattern()),
+			DataSource::EventCount { .. } => format!("count of {}", self.raw_pattern()),
+			DataSource::EventDelta { .. } => format!("delta {}", self.raw_pattern()),
 		}
 	}
 
-	fn match_token(&self) -> String {
+	/// Raw matching pattern as provided by user.
+	fn raw_pattern(&self) -> String {
 		match &self {
 			// DataSource::EventValue { pattern, yvalue, .. } => format!("{}_{}", pattern, yvalue),
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => field.clone(),
-		}
-	}
-
-	fn pattern(&self) -> String {
-		match &self {
-			DataSource::EventValue { pattern, .. }
-			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => field.clone(),
+			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
+			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => field.clone(),
 		}
 	}
 
@@ -321,7 +315,7 @@ impl DataSource {
 	/// For [`DataSource::FieldValue`] it checks if regex pattern contains a correct number of captures groups.
 	/// Otherwise no validation is performed and any pattern is assumed to be correct.
 	fn validate_field_regex(&self) -> Result<bool, Error> {
-		if let DataSource::FieldValue { field, .. } = &self {
+		if let DataSource::FieldValue(FieldCaptureSpec { field, .. }) = &self {
 			if let Ok(regex) = Regex::new(field) {
 				let captures_len = regex.captures_len() - 1;
 				if (1..=2).contains(&captures_len) {
@@ -344,8 +338,8 @@ impl DataSource {
 		match &self {
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => {
+			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
+			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => {
 				if self.is_field_valid_regex() {
 					field.clone()
 				} else {
@@ -364,8 +358,8 @@ impl DataSource {
 		match &self {
 			DataSource::EventValue { guard, .. }
 			| DataSource::EventCount { guard, .. }
-			| DataSource::EventDelta { guard, .. }
-			| DataSource::FieldValue { guard, .. } => guard,
+			| DataSource::EventDelta(EventDeltaSpec { guard, .. })
+			| DataSource::FieldValue(FieldCaptureSpec { guard, .. }) => guard,
 		}
 	}
 
@@ -433,11 +427,11 @@ impl ResolvedLine {
 /// It will be deduplicated
 fn propagate_shared_csv_files<F>(
 	config: &mut ResolvedGraphConfig,
-	shared_context: &SharedGraphContext,
+	inpput_files_context: &InputFilesContext,
 	get_cache_dir: F,
 ) -> Result<HashMap<PathBuf, ResolvedLine>, Error>
 where
-	F: Fn(&SharedGraphContext, &PathBuf) -> Result<PathBuf, Error>,
+	F: Fn(&InputFilesContext, &PathBuf) -> Result<PathBuf, Error>,
 {
 	type MatchKey = (Option<String>, String, PathBuf);
 
@@ -446,7 +440,7 @@ where
 	for panel in &mut config.panels {
 		for line in &mut panel.lines {
 			let guard = line.guard().clone();
-			let token = line.match_token();
+			let token = line.raw_pattern();
 			let input = line.source_file_name().clone();
 
 			grouped_lines.entry((guard, token, input)).or_default().push(line);
@@ -459,7 +453,7 @@ where
 
 	for ((_, _, input_filename), mut lines) in grouped_lines {
 		for line in &mut lines {
-			let output_dir = get_cache_dir(shared_context, &input_filename)?;
+			let output_dir = get_cache_dir(inpput_files_context, &input_filename)?;
 
 			let csv_output_path = output_dir.join(line.get_csv_filename());
 			line.set_shared_csv_filename(&csv_output_path);
@@ -498,11 +492,11 @@ where
 /// Processes a log file and writes CSVs based on the graph config.
 pub fn process_inputs(
 	config: &mut ResolvedGraphConfig,
-	shared_context: &SharedGraphContext,
+	input_context: &InputFilesContext,
 ) -> Result<(), Error> {
 	let mut canonical_lines =
-		propagate_shared_csv_files(config, shared_context, |shared_context, input_file_name| {
-			shared_context.get_cache_dir(input_file_name)
+		propagate_shared_csv_files(config, input_context, |input_context, input_file_name| {
+			input_context.get_cache_dir(input_file_name)
 		})?;
 
 	trace!(target: LOG_TARGET,  "after propagete_shared_csv_files {:#?}", config);
@@ -522,7 +516,7 @@ pub fn process_inputs(
 				.map_err(|e| Error::new_file_io_error(&output_dir, e))?;
 		}
 
-		if !shared_context.force_csv_regen && Path::new(&csv_output_path).exists() {
+		if !input_context.force_csv_regen() && Path::new(&csv_output_path).exists() {
 			debug!(
 				target: APPV,
 				"Using cached file for regex: {} file: {}",
@@ -536,7 +530,7 @@ pub fn process_inputs(
 			let processor = LineProcessor::from_data_source(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
-				shared_context.timestamp_format().clone(),
+				input_context.timestamp_format().clone(),
 				canonical_line.source_file_name().clone(),
 			)?;
 
@@ -598,8 +592,9 @@ pub fn process_inputs(
 pub fn regex_match_preview(
 	config: MatchPreviewConfig,
 	context: SharedMatchPreviewContext,
+	verbose_level: u8,
 ) -> Result<(), Error> {
-	let env_filter = if context.verbose {
+	let env_filter = if verbose_level == 2 {
 		EnvFilter::new(format!("warn,{}=trace", MATCH_PREVIEW))
 	} else {
 		EnvFilter::new(format!("warn,{}=debug", MATCH_PREVIEW))
@@ -776,72 +771,13 @@ impl TimestampFormat {
 	}
 }
 
-impl SharedGraphContext {
-	fn common_path_ancestor(paths: &[PathBuf]) -> Option<PathBuf> {
-		let canonicalized: Result<Vec<_>, _> = paths.iter().map(|p| p.canonicalize()).collect();
-		Self::common_path_ancestor_inner(&canonicalized.ok()?)
-	}
-
-	fn common_path_ancestor_inner(paths: &[PathBuf]) -> Option<PathBuf> {
-		if paths.is_empty() {
-			return None;
-		}
-
-		let mut iter = paths.iter();
-		let first = iter.next()?;
-
-		let mut components: Vec<_> =
-			first.parent().expect("shall be full path here").components().collect();
-
-		for path in iter {
-			let mut new_components = Vec::new();
-			for (a, b) in components
-				.iter()
-				.zip(path.parent().expect("shall be full path here").components())
-			{
-				if a == &b {
-					new_components.push(*a);
-				} else {
-					break;
-				}
-			}
-			if new_components.is_empty() {
-				return None;
-			}
-			components = new_components;
-		}
-
-		let ancestor = components.iter().fold(PathBuf::new(), |mut acc, comp| {
-			acc.push(comp.as_os_str());
-			acc
-		});
-
-		Some(ancestor)
-	}
-
-	/// Returns tuple containging the path to the image and the path to the gnuplot script
-	pub fn get_graph_output_path(&self) -> (PathBuf, PathBuf) {
-		if let Some(ref output_file) = self.inline_output {
-			let common_ancestor =
-				Self::common_path_ancestor(&self.input).unwrap_or_else(|| PathBuf::from("./"));
-			let image_path = common_ancestor.join(output_file);
-			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
-		} else {
-			let def = PathBuf::from("graph.png");
-			let output_file = self.output.as_ref().unwrap_or(&def);
-			let image_path = PathBuf::from(".").join(output_file);
-			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
-		}
-	}
-
+impl InputFilesContext {
 	/// Returns the configured root directory for storing cache files, if provided by the user.
 	///
 	/// This corresponds to the `--cache-dir` CLI option. If `None`, per-log `.plox/` directories
 	/// will be used instead. The returned path does not include any log-specific subdirectories.
 	fn get_cache_root(&self) -> &Option<PathBuf> {
-		&self.cache_dir
+		self.cache_dir()
 	}
 
 	/// Returns the directory where the cache file for a given log file should be stored.
@@ -989,7 +925,7 @@ mod tests {
 		for line in config.all_lines() {
 			let mut allowed_canonical_names = vec![];
 			for (output_file_name, canonical) in &output {
-				if line.match_token() == canonical.match_token()
+				if line.raw_pattern() == canonical.raw_pattern()
 					&& line.guard() == canonical.guard()
 					&& line.source_file_name() == canonical.source_file_name()
 				{
@@ -1011,8 +947,8 @@ mod tests {
 	fn call_propagate_shared_csv_files(
 		config: &mut ResolvedGraphConfig,
 	) -> Result<HashMap<PathBuf, ResolvedLine>, Error> {
-		let shared_context = SharedGraphContext::new_with_input(vec![PathBuf::from("input.log")]);
-		propagate_shared_csv_files(config, &shared_context, |_, _| {
+		let input_context = InputFilesContext::new_with_input(vec![PathBuf::from("input.log")]);
+		propagate_shared_csv_files(config, &input_context, |_, _| {
 			Ok(PathBuf::from("/some/out/dir"))
 		})
 	}
@@ -1043,6 +979,28 @@ mod tests {
 		let mut config = build_resolved_graph_config(vec![
 			plot_line("input.log", Some("guard"), "duration"),
 			event_count_line("input.log", Some("guard"), "duration"),
+			event_delta_line("input.log", Some("guard"), "duration"),
+		]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 1, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00c() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			plot_line("input.log", Some("guard"), "duration"),
+			event_line("input.log", Some("guard"), "duration", 100.0),
+		]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 2, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00d() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			event_line("input.log", Some("guard"), "duration", 100.0),
 			event_delta_line("input.log", Some("guard"), "duration"),
 		]);
 		let output = call_propagate_shared_csv_files(&mut config).unwrap();
@@ -1582,36 +1540,5 @@ mod tests {
 		} else {
 			panic!("incorrect error value");
 		}
-	}
-
-	#[test]
-	fn test_common_path_ancestor() {
-		init_tracing_test();
-		let p1 = PathBuf::from("/a/b/c/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b"));
-		let p1 = PathBuf::from("/a/b/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b/d"));
-		let p1 = PathBuf::from("/a/b/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b/d"));
-		let p1 = PathBuf::from("/a/c/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a"));
-		let p1 = PathBuf::from("/a/c/d/log1");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/c/d/"));
-		let p1 = PathBuf::from("/log1");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1]).unwrap();
-		assert_eq!(r, PathBuf::from("/"));
-		let p1 = PathBuf::from("/log1");
-		let p2 = PathBuf::from("/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/"));
 	}
 }

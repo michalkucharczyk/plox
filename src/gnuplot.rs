@@ -5,7 +5,7 @@
 //! of gnuplot and the saving of resulting graph images.
 
 use crate::{
-	graph_config::{AxisScale, Color, DashStyle, MarkerType, PlotStyle, SharedGraphContext, YAxis},
+	graph_config::{AxisScale, Color, DashStyle, GraphFullContext, MarkerType, PlotStyle, YAxis},
 	logging::APPV,
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
 };
@@ -148,7 +148,7 @@ fn build_default_styles() -> Vec<Style> {
 /// * `output_image_path` - The path to the output PNG file.
 pub fn write_gnuplot_script(
 	config: &ResolvedGraphConfig,
-	context: &SharedGraphContext,
+	context: &GraphFullContext,
 	output_script_path: &PathBuf,
 	output_image_path: &Path,
 ) -> Result<(), Error> {
@@ -158,7 +158,7 @@ pub fn write_gnuplot_script(
 	let plot_margin = 0.005;
 	let plot_height = 1.0 / num_non_empty_panels as f64 - plot_margin;
 
-	let has_multiple_input_files = context.input.len() > 1;
+	let has_multiple_input_files = context.input().len() > 1;
 
 	//write to gnuplot script wrapper
 	macro_rules! gpwr {
@@ -310,10 +310,7 @@ pub fn write_gnuplot_script(
 /// * `config` - Graph configuration to render.
 /// * `script_path` - Where to save the gnuplot .gnu script.
 /// * `image_path` - Output image path.
-pub fn run_gnuplot(
-	config: &ResolvedGraphConfig,
-	context: &SharedGraphContext,
-) -> Result<(), Error> {
+pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> Result<(), Error> {
 	let (image_path, script_path) = context.get_graph_output_path();
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;

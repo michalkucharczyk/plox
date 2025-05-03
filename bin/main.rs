@@ -1,9 +1,11 @@
 use clap::Parser;
 use plox::{
 	align_ranges,
-	cli::{Cli, CliCommand, Test1Args, Test2Args, build_cli},
+	cli::{Cli, CliCommand, StatArgs, build_cli},
 	error::Error,
-	gnuplot, graph_cli_builder,
+	gnuplot,
+	graph_cli_builder::{self},
+	graph_config::{GraphConfig, Line, Panel},
 	logging::{self, APPV},
 	match_preview_cli_builder, process_log, resolved_graph_config,
 };
@@ -41,29 +43,31 @@ fn main() -> ExitCode {
 
 fn inner_main() -> Result<(), Error> {
 	let matches = build_cli().get_matches();
-	logging::init_tracing(matches.get_flag("quiet"), matches.get_count("verbose"));
+	let verbose_level = matches.get_count("verbose");
+	logging::init_tracing(matches.get_flag("quiet"), verbose_level);
 
 	if let Some(graph_matches) = matches.subcommand_matches("match-preview") {
 		let (config, shared_context) =
 			match_preview_cli_builder::build_from_matches(graph_matches)?;
 		info!(target:APPV, "Provided input preview config:{config:#?}");
 		info!(target:APPV, "Provided SharedPreviewContext:{shared_context:#?}");
-		process_log::regex_match_preview(config, shared_context).map_err(Into::<Error>::into)?;
+		process_log::regex_match_preview(config, shared_context, verbose_level)
+			.map_err(Into::<Error>::into)?;
 	} else if let Some(graph_matches) = matches.subcommand_matches("graph") {
 		let (config, shared_context) = graph_cli_builder::build_from_matches(graph_matches)?;
 
 		trace!(target:APPV, "Provided input graph config:{config:#?}");
 		trace!(target:APPV, "Provided SharedGraphContext:{shared_context:#?}");
 
-		if let Some(ref output_config_path) = shared_context.output_config_path {
+		if let Some(output_config_path) = shared_context.output_config_path() {
 			config.save_to_file(output_config_path)?;
 		}
 
 		let mut resolved_config =
-			resolved_graph_config::expand_graph_config(&config, &shared_context)?;
+			resolved_graph_config::expand_graph_config_with_ctx(&config, &shared_context)?;
 
 		let now = Instant::now();
-		process_log::process_inputs(&mut resolved_config, &shared_context)
+		process_log::process_inputs(&mut resolved_config, &shared_context.input_files_ctx)
 			.map_err(Into::<Error>::into)?;
 		debug!(target:APPV,"Input files processed in: {:?}", now.elapsed());
 
@@ -79,11 +83,18 @@ fn inner_main() -> Result<(), Error> {
 		//todo histogram, etc..
 		let c = Cli::parse();
 		match c.command {
-			CliCommand::Test1(Test1Args { force }) => {
-				info!(target:APPV,"test1 {force:?}");
-			},
-			CliCommand::Test2(Test2Args { force1 }) => {
-				info!(target:APPV,"test2 {force1:?}");
+			CliCommand::Stat(StatArgs { input_files_ctx, command: source }) => {
+				info!(target:APPV,"stat {source:?}");
+				let line = Line::new_with_data_source(source.into());
+				let config =
+					GraphConfig { panels: vec![Panel::builder().with_lines(vec![line]).build()] };
+				let mut resolved_graph_config = resolved_graph_config::expand_graph_config(
+					&config,
+					input_files_ctx.input(),
+					false,
+				)?;
+				process_log::process_inputs(&mut resolved_graph_config, &input_files_ctx)
+					.map_err(Into::<Error>::into)?;
 			},
 		}
 	}

@@ -41,7 +41,7 @@ impl DataSource {
 	// receiving a single parameter from: '--plot x y' invocation (by desing in clap), so we cannot
 	// build a right instance.
 	//
-	// This could be worked around by specifying '--plot "x y"' but it is not convinient.
+	// This could be worked around by specifying '--plot "x y"' but it is not convenient.
 	// So manual parsing is required.
 	pub fn try_from_flag(id: &str, val: &[&String]) -> Result<Self, Error> {
 		Ok(match id {
@@ -64,12 +64,27 @@ impl DataSource {
 					)));
 				},
 			},
+			// match val.len() {
+			// 	1 => { regex },
+			// 	2 => { guard + regex },
+			// 	3 => { regex + unit + convert-to },
+			// 	4 => { guard + regex + unit + convert-to },
+			// 	_ => error,
+			// }
+			//
+			//       regex
+			// guard regex
+			//       regex unit convert-to
+			// guard regex unit convert-to
 			Self::CLI_NAME_PLOT_FIELD => match val.len() {
-				1 => DataSource::FieldValue { guard: None, field: val[0].to_string() },
-				2 => DataSource::FieldValue {
+				1 => DataSource::FieldValue(FieldCaptureSpec {
+					guard: None,
+					field: val[0].to_string(),
+				}),
+				2 => DataSource::FieldValue(FieldCaptureSpec {
 					guard: Some(val[0].to_string()),
 					field: val[1].to_string(),
-				},
+				}),
 				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",
@@ -93,11 +108,14 @@ impl DataSource {
 				},
 			},
 			Self::CLI_NAME_EVENT_DELTA => match val.len() {
-				1 => DataSource::EventDelta { guard: None, pattern: val[0].to_string() },
-				2 => DataSource::EventDelta {
+				1 => DataSource::EventDelta(EventDeltaSpec {
+					guard: None,
+					pattern: val[0].to_string(),
+				}),
+				2 => DataSource::EventDelta(EventDeltaSpec {
 					guard: Some(val[0].to_string()),
 					pattern: val[1].to_string(),
-				},
+				}),
 				_ => {
 					return Err(Error::GeneralCliParseError(format!(
 						"Bad parameter count ({}) for {}. This is bug.",

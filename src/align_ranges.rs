@@ -4,8 +4,7 @@
 
 use crate::{
 	graph_config::{
-		PanelAlignmentMode, PanelAlignmentModeArg, PanelRangeMode, SharedGraphContext,
-		TimeRangeArg, TimestampFormat,
+		GraphFullContext, PanelAlignmentMode, PanelRangeMode, TimeRangeArg, TimestampFormat,
 	},
 	logging::APPV,
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedPanel},
@@ -237,31 +236,13 @@ impl TimeRangeArg {
 	}
 }
 
-impl SharedGraphContext {
-	pub fn resolved_alignment_mode(
-		&self,
-		total_range: (NaiveDateTime, NaiveDateTime),
-	) -> Result<PanelAlignmentMode, Error> {
-		if let Some(time_range) = &self.time_range {
-			let resolved = time_range.resolve(total_range, self.timestamp_format())?;
-			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
-		}
-
-		Ok(match self.panel_alignment_mode {
-			Some(PanelAlignmentModeArg::SharedOverlap) => PanelAlignmentMode::SharedOverlap,
-			Some(PanelAlignmentModeArg::SharedFull) | None => PanelAlignmentMode::SharedFull,
-			Some(PanelAlignmentModeArg::PerPanel) => PanelAlignmentMode::PerPanel,
-		})
-	}
-}
-
 pub fn resolve_panels_ranges(
 	config: &mut ResolvedGraphConfig,
-	shared_context: &SharedGraphContext,
+	graph_context: &GraphFullContext,
 ) -> Result<(), Error> {
 	config.populate_line_ranges()?;
 	let global_range = config.global_time_range()?;
-	let panel_alignment_mode = shared_context.resolved_alignment_mode(global_range)?;
+	let panel_alignment_mode = graph_context.resolved_alignment_mode(global_range)?;
 
 	debug!(target: APPV, "Global total range {:?}", global_range);
 	debug!(target: APPV, "Resolved panel alignment mode {:?}", panel_alignment_mode);
