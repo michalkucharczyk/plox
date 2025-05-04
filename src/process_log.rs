@@ -12,6 +12,7 @@ use crate::{
 };
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, ParseError, TimeDelta};
 use regex::Regex;
+use serde::Deserialize;
 use std::{
 	collections::HashMap,
 	fs::{self, File},
@@ -44,6 +45,9 @@ pub enum Error {
 
 	#[error("Timestamp extraction failed: file:'{0}' format:'{1:?}', line:'{2}' ")]
 	TimestampExtractionFailure(PathBuf, TimestampFormat, String),
+
+	#[error("CSV parse error file:'{0}' error:'{1}' ")]
+	CsvParseError(PathBuf, csv::Error),
 }
 
 impl Error {
@@ -60,7 +64,7 @@ struct ProcessingState {
 }
 
 /// Single record extracted from a matching log line, with some extra stats.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 struct LogRecord {
 	pub date: Option<String>,
 	pub time: String,
@@ -810,6 +814,20 @@ impl InputFilesContext {
 			Ok(log_dir.join(".plox"))
 		}
 	}
+}
+
+pub fn read_csv(config: &ResolvedGraphConfig) -> Result<(), Error> {
+	for line in config.all_lines() {
+		let filename = line.expect_shared_csv_filename();
+		let mut rdr = csv::Reader::from_path(&filename)
+			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		for result in rdr.deserialize() {
+			let record: LogRecord =
+				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+			println!("{:?}", record.value);
+		}
+	}
+	Ok(())
 }
 
 #[cfg(test)]

@@ -84,7 +84,6 @@ fn inner_main() -> Result<(), Error> {
 		let c = Cli::parse();
 		match c.command {
 			CliCommand::Stat(StatArgs { input_files_ctx, command: source }) => {
-				info!(target:APPV,"stat {source:?}");
 				let line = Line::new_with_data_source(source.into());
 				let config =
 					GraphConfig { panels: vec![Panel::builder().with_lines(vec![line]).build()] };
@@ -95,6 +94,8 @@ fn inner_main() -> Result<(), Error> {
 				)?;
 				process_log::process_inputs(&mut resolved_graph_config, &input_files_ctx)
 					.map_err(Into::<Error>::into)?;
+
+				process_log::read_csv(&resolved_graph_config)?;
 			},
 		}
 	}

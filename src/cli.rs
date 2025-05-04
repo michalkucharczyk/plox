@@ -73,7 +73,7 @@ pub enum CliCommand {
 	Stat(StatArgs),
 }
 
-/// Represents the different ways a line's data can be sourced from logs.
+/// Represents the different ways a line's data can be sourced from logs in order to display some stats.
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum StatDataSource {
 	/// Plot a fixed numerical value (`yvalue`) whenever `pattern` appears in logs.
@@ -95,7 +95,7 @@ impl From<StatDataSource> for DataSource {
 	}
 }
 
-/// some help for test1
+/// Display stats and histogram for extracted data.
 #[derive(Debug, Args)]
 pub struct StatArgs {
 	#[clap(flatten)]
