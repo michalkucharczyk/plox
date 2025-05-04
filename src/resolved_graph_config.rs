@@ -33,8 +33,13 @@ pub struct ResolvedGraphConfig {
 }
 
 impl ResolvedGraphConfig {
+	//implement the function that counts all the lines from all the panels
 	pub fn all_lines(&self) -> impl Iterator<Item = &ResolvedLine> {
 		self.panels.iter().flat_map(|panel| panel.lines.iter())
+	}
+
+	pub fn all_lines_count(&self) -> usize {
+		self.panels.iter().map(|panel| panel.lines.len()).sum()
 	}
 }
 

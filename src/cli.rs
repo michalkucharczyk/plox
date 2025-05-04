@@ -69,18 +69,17 @@ for the log line will matched against regex.
 
 #[derive(Debug, Subcommand)]
 pub enum CliCommand {
-	//todo histogram, etc..
 	Stat(StatArgs),
+	Cat(CatArgs),
 }
 
 /// Represents the different ways a line's data can be sourced from logs in order to display some stats.
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum StatDataSource {
-	/// Plot a fixed numerical value (`yvalue`) whenever `pattern` appears in logs.
-	/// Plot the time delta between consecutive occurrences of `pattern`.
+	/// Extract the time delta between consecutive occurrences of `pattern`.
 	EventDelta(EventDeltaSpec),
 
-	/// Plot a numeric field from logs.
+	/// Extract a numeric field from logs.
 	///
 	/// This is the most common data source type.
 	FieldValue(FieldCaptureSpec),
@@ -95,11 +94,30 @@ impl From<StatDataSource> for DataSource {
 	}
 }
 
+/// Display extracted values only.
+#[derive(Debug, Args)]
+pub struct CatArgs {
+	#[clap(flatten)]
+	pub input_files_ctx: InputFilesContext,
+
+	#[command(subcommand)]
+	pub command: StatDataSource,
+}
+
 /// Display stats and histogram for extracted data.
 #[derive(Debug, Args)]
 pub struct StatArgs {
 	#[clap(flatten)]
 	pub input_files_ctx: InputFilesContext,
+
+	/// Histogram buckets count
+	#[arg(long, default_value_t = 10)]
+	pub buckets_count: u64,
+
+	/// Float precision and width to be used when printing bucket range
+	#[clap(long, num_args = 2)]
+	pub precision: Vec<usize>,
+
 	#[command(subcommand)]
 	pub command: StatDataSource,
 }

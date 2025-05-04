@@ -21,7 +21,7 @@ use std::{
 	time::UNIX_EPOCH,
 };
 use tracing::{Level, debug, info, trace, warn};
-use tracing_subscriber::{EnvFilter, Layer, Registry, fmt, layer::SubscriberExt};
+use tracing_subscriber::{EnvFilter, Layer, Registry, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
 pub const MATCH_PREVIEW: &str = "match-preview";
@@ -48,6 +48,9 @@ pub enum Error {
 
 	#[error("CSV parse error file:'{0}' error:'{1}' ")]
 	CsvParseError(PathBuf, csv::Error),
+
+	#[error("Cat command supports only one input file.")]
+	CatCmdManyInputFiles,
 }
 
 impl Error {
@@ -604,7 +607,10 @@ pub fn regex_match_preview(
 		EnvFilter::new(format!("warn,{}=debug", MATCH_PREVIEW))
 	};
 
-	let preview_layer = fmt::layer().without_time().with_target(false).with_level(true);
+	let preview_layer = tracing_subscriber::fmt::layer()
+		.without_time()
+		.with_target(false)
+		.with_level(true);
 	let preview_subscriber = Registry::default().with(preview_layer.with_filter(env_filter));
 
 	tracing::subscriber::with_default(preview_subscriber, || {
@@ -816,7 +822,170 @@ impl InputFilesContext {
 	}
 }
 
-pub fn read_csv(config: &ResolvedGraphConfig) -> Result<(), Error> {
+struct PloxHisto {
+	histogram: histo_fp::Histogram,
+	width: Option<usize>,
+	precision: Option<usize>,
+}
+
+impl PloxHisto {
+	pub fn with_buckets(
+		num_buckets: u64,
+		width: Option<usize>,
+		precision: Option<usize>,
+	) -> PloxHisto {
+		PloxHisto {
+			histogram: histo_fp::Histogram::with_buckets(num_buckets, None),
+			width,
+			precision,
+		}
+	}
+}
+
+use std::cmp;
+use std::fmt;
+impl fmt::Display for PloxHisto {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		use std::fmt::Write;
+
+		//todo: could be exposed via cli
+		let width = self.width.unwrap_or(10);
+		let precision = self.precision.unwrap_or(4);
+
+		if self.histogram.buckets().next().is_none() {
+			return Ok(());
+		}
+
+		let max_bucket_count = self.histogram.buckets().map(|b| b.count()).fold(0, cmp::max);
+
+		const WIDTH: u64 = 50;
+		let count_per_char = cmp::max(max_bucket_count / WIDTH, 1);
+
+		writeln!(f, "# Each ∎ is a count of {}", count_per_char)?;
+		writeln!(f, "#")?;
+
+		let mut count_str = String::new();
+
+		let widest_count = self.histogram.buckets().fold(0, |n, b| {
+			count_str.clear();
+			write!(&mut count_str, "{}", b.count()).unwrap();
+			cmp::max(n, count_str.len())
+		});
+
+		let mut end_str = String::new();
+		let widest_range = self.histogram.buckets().fold(0, |n, b| {
+			end_str.clear();
+			write!(
+				&mut end_str,
+				"{:width$.precision$}",
+				b.end(),
+				width = width,
+				precision = precision
+			)
+			.unwrap();
+			cmp::max(n, end_str.len())
+		});
+
+		let mut start_str = String::with_capacity(widest_range);
+
+		for bucket in self.histogram.buckets() {
+			start_str.clear();
+			write!(
+				&mut start_str,
+				"{:width$.precision$}",
+				bucket.start(),
+				width = width,
+				precision = precision
+			)
+			.unwrap();
+			for _ in 0..widest_range - start_str.len() {
+				start_str.insert(0, ' ');
+			}
+
+			end_str.clear();
+			write!(
+				&mut end_str,
+				"{:width$.precision$}",
+				bucket.end(),
+				width = width,
+				precision = precision,
+			)
+			.unwrap();
+			for _ in 0..widest_range - end_str.len() {
+				end_str.insert(0, ' ');
+			}
+
+			count_str.clear();
+			write!(&mut count_str, "{}", bucket.count()).unwrap();
+			for _ in 0..widest_count - count_str.len() {
+				count_str.insert(0, ' ');
+			}
+
+			write!(f, "{} - {} [ {} ]: ", start_str, end_str, count_str)?;
+			for _ in 0..bucket.count() / count_per_char {
+				write!(f, "∎")?;
+			}
+			writeln!(f)?;
+		}
+
+		Ok(())
+	}
+}
+
+use average::Estimate;
+pub fn display_stats(
+	config: &ResolvedGraphConfig,
+	buckets_count: u64,
+	width: Option<usize>,
+	precision: Option<usize>,
+) -> Result<(), Error> {
+	let mut values: Vec<f64> = vec![];
+	for line in config.all_lines() {
+		let filename = line.expect_shared_csv_filename();
+		let mut rdr = csv::Reader::from_path(&filename)
+			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		for result in rdr.deserialize() {
+			let record: LogRecord =
+				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+			values.push(record.value);
+		}
+	}
+
+	let mut h = PloxHisto::with_buckets(buckets_count, width, precision);
+	let mean: average::Mean = values.iter().collect();
+	let max: average::Max = values.iter().collect();
+	let min: average::Min = values.iter().collect();
+	let mut q99 = average::Quantile::new(0.99);
+	let mut q95 = average::Quantile::new(0.95);
+	let mut q90 = average::Quantile::new(0.9);
+	let mut q75 = average::Quantile::new(0.75);
+	let mut q50 = average::Quantile::new(0.5);
+	values.iter().for_each(|x| {
+		h.histogram.add(*x);
+		q99.add(*x);
+		q95.add(*x);
+		q90.add(*x);
+		q50.add(*x);
+		q75.add(*x)
+	});
+	println!(" count: {}", mean.len());
+	println!("   min: {}", min.min());
+	println!("   max: {}", max.max());
+	println!("  mean: {}", mean.mean());
+	println!("median: {}", q50.quantile());
+	println!("   q75: {}", q75.quantile());
+	println!("   q90: {}", q90.quantile());
+	println!("   q95: {}", q95.quantile());
+	println!("   q99: {}", q99.quantile());
+	println!("{h}");
+	Ok(())
+}
+
+pub fn display_values(config: &ResolvedGraphConfig) -> Result<(), Error> {
+	if config.all_lines_count() > 1 {
+		return Err(Error::CatCmdManyInputFiles);
+	}
+
 	for line in config.all_lines() {
 		let filename = line.expect_shared_csv_filename();
 		let mut rdr = csv::Reader::from_path(&filename)

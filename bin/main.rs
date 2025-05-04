@@ -1,7 +1,7 @@
 use clap::Parser;
 use plox::{
 	align_ranges,
-	cli::{Cli, CliCommand, StatArgs, build_cli},
+	cli::{CatArgs, Cli, CliCommand, StatArgs, build_cli},
 	error::Error,
 	gnuplot,
 	graph_cli_builder::{self},
@@ -83,7 +83,7 @@ fn inner_main() -> Result<(), Error> {
 		//todo histogram, etc..
 		let c = Cli::parse();
 		match c.command {
-			CliCommand::Stat(StatArgs { input_files_ctx, command: source }) => {
+			CliCommand::Cat(CatArgs { input_files_ctx, command: source }) => {
 				let line = Line::new_with_data_source(source.into());
 				let config =
 					GraphConfig { panels: vec![Panel::builder().with_lines(vec![line]).build()] };
@@ -95,7 +95,37 @@ fn inner_main() -> Result<(), Error> {
 				process_log::process_inputs(&mut resolved_graph_config, &input_files_ctx)
 					.map_err(Into::<Error>::into)?;
 
-				process_log::read_csv(&resolved_graph_config)?;
+				process_log::display_values(&resolved_graph_config)?;
+			},
+			CliCommand::Stat(StatArgs {
+				input_files_ctx,
+				command: source,
+				buckets_count,
+				precision,
+			}) => {
+				let line = Line::new_with_data_source(source.into());
+				let config =
+					GraphConfig { panels: vec![Panel::builder().with_lines(vec![line]).build()] };
+				let mut resolved_graph_config = resolved_graph_config::expand_graph_config(
+					&config,
+					input_files_ctx.input(),
+					false,
+				)?;
+				process_log::process_inputs(&mut resolved_graph_config, &input_files_ctx)
+					.map_err(Into::<Error>::into)?;
+
+				let (precision, width) = if precision.len() == 2 {
+					(Some(precision[0]), Some(precision[1]))
+				} else {
+					(None, None)
+				};
+
+				process_log::display_stats(
+					&resolved_graph_config,
+					buckets_count,
+					precision,
+					width,
+				)?;
 			},
 		}
 	}
