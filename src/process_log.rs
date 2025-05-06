@@ -3,13 +3,16 @@
 //! It supports value extraction, event counting, deltas, and outputs intermediate CSV caches.
 
 use crate::{
-	graph_config::{DataSource, SharedGraphContext, TimestampFormat},
+	graph_config::{
+		DataSource, EventDeltaSpec, FieldCaptureSpec, InputFilesContext, TimestampFormat, YAxis,
+	},
 	logging::APPV,
 	match_preview_cli_builder::{MatchPreviewConfig, SharedMatchPreviewContext},
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
 };
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, ParseError, TimeDelta};
 use regex::Regex;
+use serde::Deserialize;
 use std::{
 	collections::HashMap,
 	fs::{self, File},
@@ -17,8 +20,8 @@ use std::{
 	path::{Path, PathBuf},
 	time::UNIX_EPOCH,
 };
-use tracing::{Level, debug, info, trace};
-use tracing_subscriber::{EnvFilter, Layer, Registry, fmt, layer::SubscriberExt};
+use tracing::{Level, debug, info, trace, warn};
+use tracing_subscriber::{EnvFilter, Layer, Registry, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
 pub const MATCH_PREVIEW: &str = "match-preview";
@@ -39,6 +42,15 @@ pub enum Error {
 
 	#[error("User provided time range parsing error: {0}")]
 	TimeRangeParsingError(#[from] ParseError),
+
+	#[error("Timestamp extraction failed: file:'{0}' format:'{1:?}', line:'{2}' ")]
+	TimestampExtractionFailure(PathBuf, TimestampFormat, String),
+
+	#[error("CSV parse error file:'{0}' error:'{1}' ")]
+	CsvParseError(PathBuf, csv::Error),
+
+	#[error("Cat command supports only one input file.")]
+	CatCmdManyInputFiles,
 }
 
 impl Error {
@@ -55,7 +67,7 @@ struct ProcessingState {
 }
 
 /// Single record extracted from a matching log line, with some extra stats.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 struct LogRecord {
 	pub date: Option<String>,
 	pub time: String,
@@ -72,6 +84,8 @@ struct LineProcessor {
 	pub records: Vec<LogRecord>,
 	pub output_path: Option<PathBuf>,
 	pub timestamp_format: TimestampFormat,
+	timestamp_extraction_failure_count: usize,
+	input_file_name: PathBuf,
 }
 
 impl LineProcessor {
@@ -79,6 +93,7 @@ impl LineProcessor {
 		data_source: DataSource,
 		output_path: Option<PathBuf>,
 		timestamp_format: TimestampFormat,
+		input_file_name: PathBuf,
 	) -> Result<Self, Error> {
 		let regex = data_source.compile_regex()?;
 		Ok(Self {
@@ -88,6 +103,8 @@ impl LineProcessor {
 			timestamp_format,
 			state: ProcessingState::new(),
 			records: Vec::new(),
+			timestamp_extraction_failure_count: 0,
+			input_file_name,
 		})
 	}
 
@@ -105,14 +122,31 @@ impl LineProcessor {
 		result
 	}
 
+	fn handle_timestamp_extraction_failure(&mut self, line: &str) -> Result<(), Error> {
+		self.timestamp_extraction_failure_count += 1;
+
+		if self.timestamp_extraction_failure_count > 3 {
+			warn!(target:APPV, log_line = line,
+				timestamp_format=?self.timestamp_format,
+				"Timestamp extraction failed for {} lines. Exiting.", self.timestamp_extraction_failure_count);
+			Err(Error::TimestampExtractionFailure(
+				self.input_file_name.clone(),
+				self.timestamp_format.clone(),
+				line.to_string(),
+			))
+		} else {
+			Ok(())
+		}
+	}
+
 	pub fn guard_matches(&self, log_line: &str) -> bool {
 		self.data_source.guard().as_ref().map(|g| log_line.contains(g)).unwrap_or(true)
 	}
 
 	pub fn try_match<'a>(
-		&self,
+		&mut self,
 		line: &'a str,
-	) -> (bool, Option<(regex::Captures<'a>, ExtractedNaiveDateTime)>) {
+	) -> Result<(bool, Option<(regex::Captures<'a>, ExtractedNaiveDateTime)>), Error> {
 		if self.guard_matches(line) {
 			if tracing::event_enabled!(target:MATCH_PREVIEW, Level::TRACE) {
 				trace!(target:MATCH_PREVIEW, "try_match: line:\"{line}\"");
@@ -138,12 +172,13 @@ impl LineProcessor {
 					}
 				}
 
-				(true, captures)
+				Ok((true, captures))
 			} else {
-				(true, None)
+				self.handle_timestamp_extraction_failure(line)?;
+				Ok((true, None))
 			}
 		} else {
-			(false, None)
+			Ok((false, None))
 		}
 	}
 
@@ -228,8 +263,12 @@ impl ResolvedLine {
 		self.line.data_source.regex_filename_tag()
 	}
 
-	pub fn match_token(&self) -> String {
-		self.line.data_source.match_token()
+	pub fn raw_pattern(&self) -> String {
+		self.line.data_source.raw_pattern()
+	}
+
+	pub fn regex_pattern(&self) -> String {
+		self.line.data_source.regex_pattern()
 	}
 
 	pub fn title(&self, multi_input_files: bool) -> String {
@@ -240,7 +279,8 @@ impl ResolvedLine {
 			.expect("filename is validated at this point")
 			.to_string_lossy();
 		let title = self.line.params.title.clone().unwrap_or(self.line.data_source.title());
-		if multi_input_files { format!("{} ({})", title, file_stem) } else { title }
+		let title = if multi_input_files { format!("{} ({})", title, file_stem) } else { title };
+		if self.line.params.yaxis == Some(YAxis::Y2) { format!("{} | y2", title) } else { title }
 	}
 
 	pub fn source_file_name(&self) -> &PathBuf {
@@ -264,34 +304,50 @@ impl DataSource {
 
 	pub fn title(&self) -> String {
 		match &self {
-			DataSource::FieldValue { .. } => format!("value of {}", self.pattern()),
-			DataSource::EventValue { .. } => format!("presence of {}", self.pattern()),
-			DataSource::EventCount { .. } => format!("count of {}", self.pattern()),
-			DataSource::EventDelta { .. } => format!("delta {}", self.pattern()),
+			DataSource::FieldValue(FieldCaptureSpec { guard: Some(guard), .. }) => {
+				format!("value of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventValue { guard: Some(guard), .. } => {
+				format!("presence of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventCount { guard: Some(guard), .. } => {
+				format!("count of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventDelta(EventDeltaSpec { guard: Some(guard), .. }) => {
+				format!("delta {} {}", guard, self.raw_pattern())
+			},
+			DataSource::FieldValue(FieldCaptureSpec { guard: None, .. }) => {
+				format!("value of {}", self.raw_pattern())
+			},
+			DataSource::EventValue { guard: None, .. } => {
+				format!("presence of {}", self.raw_pattern())
+			},
+			DataSource::EventCount { guard: None, .. } => {
+				format!("count of {}", self.raw_pattern())
+			},
+			DataSource::EventDelta(EventDeltaSpec { guard: None, .. }) => {
+				format!("delta {}", self.raw_pattern())
+			},
 		}
 	}
 
-	fn match_token(&self) -> String {
+	/// Raw matching pattern as provided by user.
+	fn raw_pattern(&self) -> String {
 		match &self {
 			// DataSource::EventValue { pattern, yvalue, .. } => format!("{}_{}", pattern, yvalue),
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => field.clone(),
+			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
+			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => field.clone(),
 		}
 	}
 
-	fn pattern(&self) -> String {
-		match &self {
-			DataSource::EventValue { pattern, .. }
-			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => field.clone(),
-		}
-	}
-
+	/// Checks if regex pattern is valid.
+	///
+	/// For [`DataSource::FieldValue`] it checks if regex pattern contains a correct number of captures groups.
+	/// Otherwise no validation is performed and any pattern is assumed to be correct.
 	fn validate_field_regex(&self) -> Result<bool, Error> {
-		if let DataSource::FieldValue { field, .. } = &self {
+		if let DataSource::FieldValue(FieldCaptureSpec { field, .. }) = &self {
 			if let Ok(regex) = Regex::new(field) {
 				let captures_len = regex.captures_len() - 1;
 				if (1..=2).contains(&captures_len) {
@@ -309,16 +365,17 @@ impl DataSource {
 		self.validate_field_regex().unwrap_or(false)
 	}
 
+	/// Returns actual regex pattern that will be used for matching events and extracting values.
 	fn regex_pattern(&self) -> String {
 		match &self {
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
-			| DataSource::EventDelta { pattern, .. } => pattern.clone(),
-			DataSource::FieldValue { field, .. } => {
+			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
+			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => {
 				if self.is_field_valid_regex() {
 					field.clone()
 				} else {
-					format!(r"{}=([\d\.]+)(\w+)?", regex::escape(field))
+					format!(r"\b{}=([\d\.]+)(\w+)?", regex::escape(field))
 				}
 			},
 		}
@@ -333,8 +390,8 @@ impl DataSource {
 		match &self {
 			DataSource::EventValue { guard, .. }
 			| DataSource::EventCount { guard, .. }
-			| DataSource::EventDelta { guard, .. }
-			| DataSource::FieldValue { guard, .. } => guard,
+			| DataSource::EventDelta(EventDeltaSpec { guard, .. })
+			| DataSource::FieldValue(FieldCaptureSpec { guard, .. }) => guard,
 		}
 	}
 
@@ -402,11 +459,11 @@ impl ResolvedLine {
 /// It will be deduplicated
 fn propagate_shared_csv_files<F>(
 	config: &mut ResolvedGraphConfig,
-	shared_context: &SharedGraphContext,
+	inpput_files_context: &InputFilesContext,
 	get_cache_dir: F,
 ) -> Result<HashMap<PathBuf, ResolvedLine>, Error>
 where
-	F: Fn(&SharedGraphContext, &PathBuf) -> Result<PathBuf, Error>,
+	F: Fn(&InputFilesContext, &PathBuf) -> Result<PathBuf, Error>,
 {
 	type MatchKey = (Option<String>, String, PathBuf);
 
@@ -415,7 +472,7 @@ where
 	for panel in &mut config.panels {
 		for line in &mut panel.lines {
 			let guard = line.guard().clone();
-			let token = line.match_token();
+			let token = line.raw_pattern();
 			let input = line.source_file_name().clone();
 
 			grouped_lines.entry((guard, token, input)).or_default().push(line);
@@ -428,7 +485,7 @@ where
 
 	for ((_, _, input_filename), mut lines) in grouped_lines {
 		for line in &mut lines {
-			let output_dir = get_cache_dir(shared_context, &input_filename)?;
+			let output_dir = get_cache_dir(inpput_files_context, &input_filename)?;
 
 			let csv_output_path = output_dir.join(line.get_csv_filename());
 			line.set_shared_csv_filename(&csv_output_path);
@@ -467,11 +524,11 @@ where
 /// Processes a log file and writes CSVs based on the graph config.
 pub fn process_inputs(
 	config: &mut ResolvedGraphConfig,
-	shared_context: &SharedGraphContext,
+	input_context: &InputFilesContext,
 ) -> Result<(), Error> {
 	let mut canonical_lines =
-		propagate_shared_csv_files(config, shared_context, |shared_context, input_file_name| {
-			shared_context.get_cache_dir(input_file_name)
+		propagate_shared_csv_files(config, input_context, |input_context, input_file_name| {
+			input_context.get_cache_dir(input_file_name)
 		})?;
 
 	trace!(target: LOG_TARGET,  "after propagete_shared_csv_files {:#?}", config);
@@ -491,7 +548,7 @@ pub fn process_inputs(
 				.map_err(|e| Error::new_file_io_error(&output_dir, e))?;
 		}
 
-		if !shared_context.force_csv_regen && Path::new(&csv_output_path).exists() {
+		if !input_context.force_csv_regen() && Path::new(&csv_output_path).exists() {
 			debug!(
 				target: APPV,
 				"Using cached file for regex: {} file: {}",
@@ -505,7 +562,8 @@ pub fn process_inputs(
 			let processor = LineProcessor::from_data_source(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
-				shared_context.timestamp_format().clone(),
+				input_context.timestamp_format().clone(),
+				canonical_line.source_file_name().clone(),
 			)?;
 
 			processors
@@ -528,21 +586,25 @@ pub fn process_inputs(
 		let reader = BufReader::new(input_file);
 		for line in reader.lines().map_while(Result::ok) {
 			for processor in &mut processors.values_mut() {
-				if let (_, Some((captures, timestamp))) = processor.try_match(&line) {
+				if let (_, Some((captures, timestamp))) = processor.try_match(&line)? {
 					processor.process(captures, timestamp);
 				}
 			}
 		}
 		// Write all output files
 		for (_, processor) in processors {
-			debug!(
-				target:APPV,
-				"Processed input file: {}, regex: {}, matched {}, cache file: {}",
-				log_file_name.display(),
-				processor.data_source.regex_pattern(),
-				processor.records.len(),
-				processor.expect_output_path().display()
-			);
+			assert_eq!(log_file_name, processor.input_file_name);
+			if !processor.records.is_empty() {
+				debug!(
+					target:APPV,
+					"Processed input file: {}, regex: {}, matched {}, cache file: {}",
+					log_file_name.display(),
+					processor.data_source.regex_pattern(),
+					processor.records.len(),
+					processor.expect_output_path().display()
+				);
+			}
+
 			processor.write_csv()?;
 		}
 	}
@@ -555,14 +617,18 @@ pub fn process_inputs(
 pub fn regex_match_preview(
 	config: MatchPreviewConfig,
 	context: SharedMatchPreviewContext,
+	verbose_level: u8,
 ) -> Result<(), Error> {
-	let env_filter = if context.verbose {
+	let env_filter = if verbose_level == 2 {
 		EnvFilter::new(format!("warn,{}=trace", MATCH_PREVIEW))
 	} else {
 		EnvFilter::new(format!("warn,{}=debug", MATCH_PREVIEW))
 	};
 
-	let preview_layer = fmt::layer().without_time().with_target(false).with_level(true);
+	let preview_layer = tracing_subscriber::fmt::layer()
+		.without_time()
+		.with_target(false)
+		.with_level(true);
 	let preview_subscriber = Registry::default().with(preview_layer.with_filter(env_filter));
 
 	tracing::subscriber::with_default(preview_subscriber, || {
@@ -578,6 +644,7 @@ pub fn regex_match_preview_inner(
 		config.data_source.clone(),
 		None,
 		context.timestamp_format().clone(),
+		context.input.clone(),
 	)?;
 
 	let input_file =
@@ -593,7 +660,7 @@ pub fn regex_match_preview_inner(
 	info!(target:MATCH_PREVIEW, "timestamp pattern: {:?}", context.timestamp_format);
 
 	for line in reader.lines().map_while(Result::ok) {
-		let (guard_matched, captured) = processor.try_match(&line);
+		let (guard_matched, captured) = processor.try_match(&line)?;
 		if guard_matched {
 			if let Some((captures, timestamp)) = captured {
 				processor.process(captures, timestamp);
@@ -609,8 +676,8 @@ pub fn regex_match_preview_inner(
 
 	if matched_count == 0 {
 		if let Some(guard) = config.data_source.guard() {
-			info!(target:APPV, "No lines matched agains guard: '{:?}'", guard);
-			info!(target:APPV, "Is it correctly configured?");
+			warn!(target:MATCH_PREVIEW, "No lines matched against guard: '{:?}'", guard);
+			warn!(target:MATCH_PREVIEW, "Is it correctly configured?");
 		}
 	}
 	Ok(())
@@ -625,7 +692,30 @@ impl ResolvedGraphConfig {
 					File::open(&file_path).map_err(|e| Error::new_file_io_error(&file_path, e))?;
 				let reader = io::BufReader::new(file);
 
-				line.set_data_points_count(reader.lines().count() - 1);
+				let data_points_count = reader.lines().count() - 1;
+				line.set_data_points_count(data_points_count);
+
+				let log_file_name = line.source_file_name();
+				if data_points_count == 0 {
+					warn!(
+						target:APPV,
+						input_file = ?log_file_name.display(),
+						guard = ?line.guard(),
+						regex = line.regex_pattern(),
+						"No matches."
+					);
+				} else {
+					debug!(
+						target:APPV,
+						"Matched {} entries: {}{}, user-pattern: {}, regex: {}, cache file: {}",
+						data_points_count,
+						log_file_name.display(),
+						line.guard().clone().map(|v| format!(", guard: {v}")).unwrap_or_default(),
+						line.raw_pattern(),
+						line.regex_pattern(),
+						line.expect_shared_csv_filename().display()
+					);
+				}
 			}
 		}
 		Ok(())
@@ -732,84 +822,25 @@ impl TimestampFormat {
 	}
 }
 
-impl SharedGraphContext {
-	fn common_path_ancestor(paths: &[PathBuf]) -> Option<PathBuf> {
-		let canonicalized: Result<Vec<_>, _> = paths.iter().map(|p| p.canonicalize()).collect();
-		Self::common_path_ancestor_inner(&canonicalized.ok()?)
-	}
-
-	fn common_path_ancestor_inner(paths: &[PathBuf]) -> Option<PathBuf> {
-		if paths.is_empty() {
-			return None;
-		}
-
-		let mut iter = paths.iter();
-		let first = iter.next()?;
-
-		let mut components: Vec<_> =
-			first.parent().expect("shall be full path here").components().collect();
-
-		for path in iter {
-			let mut new_components = Vec::new();
-			for (a, b) in components
-				.iter()
-				.zip(path.parent().expect("shall be full path here").components())
-			{
-				if a == &b {
-					new_components.push(*a);
-				} else {
-					break;
-				}
-			}
-			if new_components.is_empty() {
-				return None;
-			}
-			components = new_components;
-		}
-
-		let ancestor = components.iter().fold(PathBuf::new(), |mut acc, comp| {
-			acc.push(comp.as_os_str());
-			acc
-		});
-
-		Some(ancestor)
-	}
-
-	/// Returns tuple containging the path to the image and the path to the gnuplot script
-	pub fn get_graph_output_path(&self) -> (PathBuf, PathBuf) {
-		if let Some(ref output_file) = self.inline_output {
-			let common_ancestor =
-				Self::common_path_ancestor(&self.input).unwrap_or_else(|| PathBuf::from("./"));
-			let image_path = common_ancestor.join(output_file);
-			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
-		} else {
-			let def = PathBuf::from("graph.png");
-			let output_file = self.output.as_ref().unwrap_or(&def);
-			let image_path = PathBuf::from(".").join(output_file);
-			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
-		}
-	}
-
+impl InputFilesContext {
 	/// Returns the configured root directory for storing cache files, if provided by the user.
 	///
 	/// This corresponds to the `--cache-dir` CLI option. If `None`, per-log `.plox/` directories
 	/// will be used instead. The returned path does not include any log-specific subdirectories.
 	fn get_cache_root(&self) -> &Option<PathBuf> {
-		&self.cache_dir
+		self.cache_dir()
 	}
 
 	/// Returns the directory where the cache file for a given log file should be stored.
 	///
 	/// If a global `--cache-dir` is provided, the full canonical path of the log file is
 	/// reproduced as a subdirectory inside it. For example:
-	///   log: `/var/log/app/debug.log`  
-	///   cache-dir: `~/.cache/plox`  
+	///   log: `/var/log/app/debug.log`
+	///   cache-dir: `~/.cache/plox`
 	///   result: `~/.cache/plox/var/log/app/`
 	///
 	/// If no `--cache-dir` is given, a `.plox/` directory is created next to the log file:
-	///   log: `./logs/debug.log`  
+	///   log: `./logs/debug.log`
 	///   result: `./logs/.plox/`
 	///
 	/// The log file must exist and be canonicalizable; otherwise this function returns an error.
@@ -830,6 +861,212 @@ impl SharedGraphContext {
 			Ok(log_dir.join(".plox"))
 		}
 	}
+}
+
+struct PloxHisto {
+	histogram: histo_fp::Histogram,
+	width: Option<usize>,
+	precision: Option<usize>,
+}
+
+impl PloxHisto {
+	pub fn with_buckets(
+		num_buckets: u64,
+		width: Option<usize>,
+		precision: Option<usize>,
+	) -> PloxHisto {
+		PloxHisto {
+			histogram: histo_fp::Histogram::with_buckets(num_buckets, None),
+			width,
+			precision,
+		}
+	}
+}
+
+use std::cmp;
+use std::fmt;
+impl fmt::Display for PloxHisto {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		use std::fmt::Write;
+
+		let width = self.width.unwrap_or(10);
+		let precision = self.precision.unwrap_or(4);
+
+		if self.histogram.buckets().next().is_none() {
+			return Ok(());
+		}
+
+		let max_bucket_count = self.histogram.buckets().map(|b| b.count()).fold(0, cmp::max);
+
+		const WIDTH: u64 = 50;
+		let count_per_char = cmp::max(max_bucket_count / WIDTH, 1);
+
+		writeln!(f, "# Each ∎ is a count of {}", count_per_char)?;
+		writeln!(f, "#")?;
+
+		let mut count_str = String::new();
+
+		let widest_count = self.histogram.buckets().fold(0, |n, b| {
+			count_str.clear();
+			write!(&mut count_str, "{}", b.count()).unwrap();
+			cmp::max(n, count_str.len())
+		});
+
+		let mut end_str = String::new();
+		let widest_range = self.histogram.buckets().fold(0, |n, b| {
+			end_str.clear();
+			write!(
+				&mut end_str,
+				"{:width$.precision$}",
+				b.end(),
+				width = width,
+				precision = precision
+			)
+			.unwrap();
+			cmp::max(n, end_str.len())
+		});
+
+		let mut start_str = String::with_capacity(widest_range);
+
+		for bucket in self.histogram.buckets() {
+			start_str.clear();
+			write!(
+				&mut start_str,
+				"{:width$.precision$}",
+				bucket.start(),
+				width = width,
+				precision = precision
+			)
+			.unwrap();
+			for _ in 0..widest_range - start_str.len() {
+				start_str.insert(0, ' ');
+			}
+
+			end_str.clear();
+			write!(
+				&mut end_str,
+				"{:width$.precision$}",
+				bucket.end(),
+				width = width,
+				precision = precision,
+			)
+			.unwrap();
+			for _ in 0..widest_range - end_str.len() {
+				end_str.insert(0, ' ');
+			}
+
+			count_str.clear();
+			write!(&mut count_str, "{}", bucket.count()).unwrap();
+			for _ in 0..widest_count - count_str.len() {
+				count_str.insert(0, ' ');
+			}
+
+			write!(f, "{} - {} [ {} ]: ", start_str, end_str, count_str)?;
+			for _ in 0..bucket.count() / count_per_char {
+				write!(f, "∎")?;
+			}
+			writeln!(f)?;
+		}
+
+		Ok(())
+	}
+}
+
+use average::Estimate;
+pub fn display_stats(
+	config: &ResolvedGraphConfig,
+	buckets_count: u64,
+	width: Option<usize>,
+	precision: Option<usize>,
+) -> Result<(), Error> {
+	let lines_count = config.all_lines_count();
+
+	for (i, line) in config.all_lines().enumerate() {
+		let filename = line.expect_shared_csv_filename();
+		let mut rdr = csv::Reader::from_path(&filename)
+			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		let mut values: Vec<f64> = vec![];
+		for result in rdr.deserialize() {
+			let record: LogRecord =
+				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+
+			match &line.line.data_source {
+				DataSource::FieldValue { .. } => values.push(record.value),
+				DataSource::EventDelta { .. } => {
+					record.diff.inspect(|v| values.push(*v));
+				},
+				_ => {
+					unreachable!("this is bug.");
+				},
+			};
+		}
+		let mut h = PloxHisto::with_buckets(buckets_count, width, precision);
+		let mean: average::Mean = values.iter().collect();
+		let max: average::Max = values.iter().collect();
+		let min: average::Min = values.iter().collect();
+		let mut q99 = average::Quantile::new(0.99);
+		let mut q95 = average::Quantile::new(0.95);
+		let mut q90 = average::Quantile::new(0.9);
+		let mut q75 = average::Quantile::new(0.75);
+		let mut q50 = average::Quantile::new(0.5);
+		values.iter().for_each(|x| {
+			h.histogram.add(*x);
+			q99.add(*x);
+			q95.add(*x);
+			q90.add(*x);
+			q50.add(*x);
+			q75.add(*x)
+		});
+		if i > 0 {
+			println!("-------------------------");
+		}
+
+		if lines_count > 1 {
+			println!("file: {}", line.source.file_name().display());
+		}
+		println!(" count: {}", values.len());
+		if values.is_empty() {
+			continue;
+		}
+		println!("   min: {}", min.min());
+		println!("   max: {}", max.max());
+		println!("  mean: {}", mean.mean());
+		println!("median: {}", q50.quantile());
+		println!("   q75: {}", q75.quantile());
+		println!("   q90: {}", q90.quantile());
+		println!("   q95: {}", q95.quantile());
+		println!("   q99: {}", q99.quantile());
+		println!("\n{h}");
+	}
+
+	Ok(())
+}
+
+pub fn display_values(config: &ResolvedGraphConfig) -> Result<(), Error> {
+	if config.all_lines_count() > 1 {
+		return Err(Error::CatCmdManyInputFiles);
+	}
+
+	for line in config.all_lines() {
+		let filename = line.expect_shared_csv_filename();
+		let mut rdr = csv::Reader::from_path(&filename)
+			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		for result in rdr.deserialize() {
+			let record: LogRecord =
+				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+
+			match &line.line.data_source {
+				DataSource::FieldValue { .. } => println!("{:?}", record.value),
+				DataSource::EventDelta { .. } => {
+					record.diff.inspect(|v| println!("{:?}", v));
+				},
+				_ => {
+					unreachable!("this is bug.");
+				},
+			};
+		}
+	}
+	Ok(())
 }
 
 #[cfg(test)]
@@ -945,7 +1182,7 @@ mod tests {
 		for line in config.all_lines() {
 			let mut allowed_canonical_names = vec![];
 			for (output_file_name, canonical) in &output {
-				if line.match_token() == canonical.match_token()
+				if line.raw_pattern() == canonical.raw_pattern()
 					&& line.guard() == canonical.guard()
 					&& line.source_file_name() == canonical.source_file_name()
 				{
@@ -967,8 +1204,8 @@ mod tests {
 	fn call_propagate_shared_csv_files(
 		config: &mut ResolvedGraphConfig,
 	) -> Result<HashMap<PathBuf, ResolvedLine>, Error> {
-		let shared_context = SharedGraphContext::new_with_input(vec![PathBuf::from("input.log")]);
-		propagate_shared_csv_files(config, &shared_context, |_, _| {
+		let input_context = InputFilesContext::new_with_input(vec![PathBuf::from("input.log")]);
+		propagate_shared_csv_files(config, &input_context, |_, _| {
 			Ok(PathBuf::from("/some/out/dir"))
 		})
 	}
@@ -999,6 +1236,28 @@ mod tests {
 		let mut config = build_resolved_graph_config(vec![
 			plot_line("input.log", Some("guard"), "duration"),
 			event_count_line("input.log", Some("guard"), "duration"),
+			event_delta_line("input.log", Some("guard"), "duration"),
+		]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 1, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00c() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			plot_line("input.log", Some("guard"), "duration"),
+			event_line("input.log", Some("guard"), "duration", 100.0),
+		]);
+		let output = call_propagate_shared_csv_files(&mut config).unwrap();
+		check_output_and_config(config, output, 2, false);
+	}
+
+	#[test]
+	fn test_csv_resolution_00d() {
+		init_tracing_test();
+		let mut config = build_resolved_graph_config(vec![
+			event_line("input.log", Some("guard"), "duration", 100.0),
 			event_delta_line("input.log", Some("guard"), "duration"),
 		]);
 		let output = call_propagate_shared_csv_files(&mut config).unwrap();
@@ -1159,11 +1418,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1185,11 +1445,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1219,11 +1480,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%b %d %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1252,11 +1514,47 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"[%s]".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
+		let (captures, timestamp) = matched.unwrap();
+		assert!(g);
+
+		let d = NaiveDate::from_ymd_opt(2019, 12, 31).unwrap();
+		let t = NaiveTime::from_hms_opt(23, 16, 39).unwrap();
+		assert_eq!(timestamp.date().unwrap(), d);
+		assert_eq!(timestamp.time(), t);
+
+		processor.process(captures, timestamp);
+
+		assert_eq!(processor.records.len(), 1);
+		let record = &processor.records[0];
+		assert_eq!(record.value, 3.17);
+		assert_eq!(record.count, 1);
+		assert_eq!(record.diff, None);
+	}
+
+	#[test]
+	#[ignore]
+	fn test_line_processing_date_format_seconds_since_epoch2() {
+		init_tracing_test();
+		let log_line = "[636152.333]  1000     25131   6737.00      3.17 817575604 3179060   2.41  polkadot-parach";
+		let resolved_line =
+			plot_line("input.log", Some("polkadot-parach"), r"^\s+(?:[\d\.]+\s+){3}([\d\.]+)");
+
+		let mut processor = LineProcessor::from_data_source(
+			resolved_line.line.data_source,
+			Some(PathBuf::from("output.csv")),
+			"[%s.3f]".into(),
+			"input.log".into(),
+		)
+		.unwrap();
+
+		assert!(processor.guard_matches(log_line));
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1285,11 +1583,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1318,11 +1617,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 
@@ -1351,11 +1651,12 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap();
 
 		assert!(processor.guard_matches(log_line));
-		let (g, matched) = processor.try_match(log_line);
+		let (g, matched) = processor.try_match(log_line).unwrap();
 		let (captures, timestamp) = matched.unwrap();
 		assert!(g);
 		processor.process(captures, timestamp);
@@ -1389,12 +1690,13 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		for log_line in log_lines {
 			assert!(processor.guard_matches(log_line));
-			let (g, matched) = processor.try_match(log_line);
+			let (g, matched) = processor.try_match(log_line).unwrap();
 			let (captures, timestamp) = matched.unwrap();
 			assert!(g);
 			processor.process(captures, timestamp);
@@ -1440,12 +1742,13 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
 		)
 		.unwrap();
 
 		for log_line in log_lines {
 			assert!(processor.guard_matches(log_line));
-			let (g, matched) = processor.try_match(log_line);
+			let (g, matched) = processor.try_match(log_line).unwrap();
 			let (captures, timestamp) = matched.unwrap();
 			assert!(g);
 			processor.process(captures, timestamp);
@@ -1485,6 +1788,7 @@ mod tests {
 			resolved_line.line.data_source,
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
+			"input.log".into(),
 		)
 		.unwrap_err();
 
@@ -1493,36 +1797,5 @@ mod tests {
 		} else {
 			panic!("incorrect error value");
 		}
-	}
-
-	#[test]
-	fn test_common_path_ancestor() {
-		init_tracing_test();
-		let p1 = PathBuf::from("/a/b/c/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b"));
-		let p1 = PathBuf::from("/a/b/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b/d"));
-		let p1 = PathBuf::from("/a/b/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/b/d"));
-		let p1 = PathBuf::from("/a/c/d/log1");
-		let p2 = PathBuf::from("/a/b/d/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/a"));
-		let p1 = PathBuf::from("/a/c/d/log1");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1]).unwrap();
-		assert_eq!(r, PathBuf::from("/a/c/d/"));
-		let p1 = PathBuf::from("/log1");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1]).unwrap();
-		assert_eq!(r, PathBuf::from("/"));
-		let p1 = PathBuf::from("/log1");
-		let p2 = PathBuf::from("/log2");
-		let r = SharedGraphContext::common_path_ancestor_inner(&[p1, p2]).unwrap();
-		assert_eq!(r, PathBuf::from("/"));
 	}
 }

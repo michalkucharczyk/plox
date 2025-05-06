@@ -1,7 +1,7 @@
 //! This module builds the 'match-preview' subcommand, which helps users test their regex patterns.
 
-use crate::data_source_cli_builder::build_data_source_cli;
 use crate::graph_config::*;
+use crate::{cli::EXTRA_HELP, data_source_cli_builder::build_data_source_cli};
 use clap::{ArgMatches, Args, Command, CommandFactory, FromArgMatches, Parser};
 use std::path::PathBuf;
 use tracing::trace;
@@ -21,7 +21,6 @@ pub enum Error {
 #[derive(Debug)]
 pub struct MatchPreviewConfig {
 	pub data_source: DataSource,
-	pub count: usize,
 }
 
 impl MatchPreviewConfig {
@@ -41,7 +40,7 @@ impl MatchPreviewConfig {
 			}
 		}
 
-		Ok(MatchPreviewConfig { data_source: data_source.expect("xxx"), count: 10 })
+		Ok(MatchPreviewConfig { data_source: data_source.expect("xxx") })
 	}
 }
 
@@ -65,10 +64,6 @@ pub struct SharedMatchPreviewContext {
 	/// The format of the timestamp which is used in logs.
 	#[arg(long)]
 	pub timestamp_format: Option<TimestampFormat>,
-
-	/// Enable match preview verbose ouptut.
-	#[arg(long, default_value_t = false)]
-	pub verbose: bool,
 }
 
 impl SharedMatchPreviewContext {
@@ -83,49 +78,32 @@ impl SharedMatchPreviewContext {
 pub fn build_cli() -> Command {
 	let long_about = r#"
 The 'match-preview' command allow to play with regex and debug matching them against the log file.
-
-Supports:
-TODO add some nice text
-- ...
+Useful for confirming timestamp and value/field extractions and event matches before generating plots.
 "#;
 
-	let graph_cmd = Command::new("match-preview").about("... todo ...").long_about(long_about);
+	let match_cmd = Command::new("match-preview")
+		.about("Test regex field patterns on log files before plotting")
+		.long_about(long_about);
 
-	let mut graph_config_cli = build_data_source_cli(graph_cmd);
+	let mut match_config_cli = build_data_source_cli(match_cmd);
 
 	{
 		let cmd = DummyCliSharedMatchPreviewContext::command();
 		let args = cmd.get_arguments();
 
 		for arg in args {
-			let arg = arg.clone().help_heading("Match Preview Context");
-			graph_config_cli = graph_config_cli.arg(&arg);
+			let arg = arg.clone().help_heading("Match Preview Options");
+			match_config_cli = match_config_cli.arg(&arg);
 		}
 	}
 
-	//todo avoid copy:
-	let after_help: &'static str = color_print::cstr!(
-		r#"
-<bold><underline>Plot Field regex</underline></bold>
-Regex pattern shall contain a single capture group for matching value only, or two
-capture groups for matching value and unit
-
-Regex pattern does not match the timestamp. Timestamp will be striped and the remainder
-for the log line will matched agains regex.
-
-<underline>Examples</underline>:
-- <bold>"duration"</bold>                       - matches "5s" in "duration=5s"
-- <bold>"duration:([\d\.]+)(\w+)?"</bold>       - matches "5s" in log: "duration:5s"
-- <bold>"^\s+(?:[\d\.]+\s+){3}([\d\.]+)"</bold> - matches 4th column (whitespace separated)
-"#
-	);
-	graph_config_cli.after_long_help(after_help)
+	match_config_cli.after_long_help(EXTRA_HELP)
 }
 
 pub fn build_from_matches(
 	matches: &ArgMatches,
 ) -> Result<(MatchPreviewConfig, SharedMatchPreviewContext), crate::error::Error> {
-	let shared_graph_config =
+	let shared_match_config =
 		SharedMatchPreviewContext::from_arg_matches(matches).map_err(|e| {
 			Error::GeneralCliParseError(format!(
 				"SharedGraphContext Instantiation failed. This is bug. {}",
@@ -135,14 +113,14 @@ pub fn build_from_matches(
 
 	let config = MatchPreviewConfig::try_from_matches(matches)?;
 
-	Ok((config, shared_graph_config))
+	Ok((config, shared_match_config))
 }
 
 /// Intended to be used in test.
 pub fn build_from_cli_args(
 	args: Vec<&'static str>,
 ) -> Result<(MatchPreviewConfig, SharedMatchPreviewContext), crate::error::Error> {
-	let full_args: Vec<_> = ["graph"].into_iter().chain(args).collect();
+	let full_args: Vec<_> = ["match-preview"].into_iter().chain(args).collect();
 	let matches = build_cli().try_get_matches_from(full_args.clone()).unwrap();
 	build_from_matches(&matches)
 }

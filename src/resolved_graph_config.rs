@@ -11,7 +11,10 @@
 #![allow(unused_variables)]
 use crate::{
 	error::Error,
-	graph_config::{DataSource, GraphConfig, Line, LineParams, PanelParams, SharedGraphContext},
+	graph_config::{
+		DataSource, GraphConfig, GraphFullContext, Line, LineParams, OutputGraphContext,
+		PanelParams,
+	},
 };
 use chrono::NaiveDateTime;
 use clap::Args;
@@ -30,8 +33,13 @@ pub struct ResolvedGraphConfig {
 }
 
 impl ResolvedGraphConfig {
+	//implement the function that counts all the lines from all the panels
 	pub fn all_lines(&self) -> impl Iterator<Item = &ResolvedLine> {
 		self.panels.iter().flat_map(|panel| panel.lines.iter())
+	}
+
+	pub fn all_lines_count(&self) -> usize {
+		self.panels.iter().map(|panel| panel.lines.len()).sum()
 	}
 }
 
@@ -283,6 +291,12 @@ impl Line {
 		}
 	}
 }
+pub fn expand_graph_config_with_ctx(
+	graph: &GraphConfig,
+	ctx: &GraphFullContext,
+) -> Result<ResolvedGraphConfig, Error> {
+	expand_graph_config(graph, ctx.input(), ctx.output_graph_ctx.per_file_panels())
+}
 
 /// Expands a generic `GraphConfig` using the given `SharedGraphContext`, producing a fully resolved
 /// `ResolvedGraphConfig`.
@@ -298,12 +312,12 @@ impl Line {
 /// The result is a `ResolvedGraphConfig` with each line assigned to an exact file and input index.
 pub fn expand_graph_config(
 	graph: &GraphConfig,
-	ctx: &SharedGraphContext,
+	input: &[PathBuf],
+	per_file_panels: bool,
 ) -> Result<ResolvedGraphConfig, Error> {
-	// todo!()
 	let mut resolved_panels = vec![];
 
-	if ctx.per_file_panels() {
+	if per_file_panels {
 		for panel in &graph.panels {
 			let is_any_line_to_be_populated =
 				panel.lines.iter().any(|l| l.source() == LineSource::AllInputFiles);
@@ -320,7 +334,7 @@ pub fn expand_graph_config(
 						LineSource::FileId(id) => vec![
 							ResolvedLine::try_from_populated_inputs(
 								line.clone(),
-								Some((id, &ctx.input[id])),
+								Some((id, &input[id])),
 							)
 							.expect("Line shall be resolvable"),
 						],
@@ -330,7 +344,7 @@ pub fn expand_graph_config(
 					})
 					.collect::<Vec<_>>();
 
-				for (file_id, input_file) in ctx.input.iter().enumerate() {
+				for (file_id, input_file) in input.iter().enumerate() {
 					let resolved_lines = panel
 						.lines
 						.iter()
@@ -368,7 +382,7 @@ pub fn expand_graph_config(
 						LineSource::FileId(id) => vec![
 							ResolvedLine::try_from_populated_inputs(
 								line.clone(),
-								Some((id, &ctx.input[id])),
+								Some((id, &input[id])),
 							)
 							.expect("Line shall be resolvable"),
 						],
@@ -397,8 +411,7 @@ pub fn expand_graph_config(
 						vec![ResolvedLine::from_explicit_name(line.clone(), file)]
 					},
 
-					LineSource::FileId(_) | LineSource::AllInputFiles => ctx
-						.input
+					LineSource::FileId(_) | LineSource::AllInputFiles => input
 						.iter()
 						.enumerate()
 						.filter_map(|(i, f)| {
@@ -426,7 +439,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		graph_cli_builder,
-		graph_config::{DEFAULT_TIMESTAMP_FORMAT, DataSource, Panel, TimestampFormat},
+		graph_config::{
+			DEFAULT_TIMESTAMP_FORMAT, DataSource, EventDeltaSpec, FieldCaptureSpec, Panel,
+			TimestampFormat,
+		},
 		logging::init_tracing_test,
 	};
 
@@ -435,8 +451,8 @@ mod tests {
 			match self.data_source {
 				DataSource::EventValue { ref pattern, .. }
 				| DataSource::EventCount { ref pattern, .. }
-				| DataSource::EventDelta { ref pattern, .. }
-				| DataSource::FieldValue { field: ref pattern, .. } => pattern.clone(),
+				| DataSource::EventDelta(EventDeltaSpec { ref pattern, .. })
+				| DataSource::FieldValue(FieldCaptureSpec { field: ref pattern, .. }) => pattern.clone(),
 			}
 		}
 	}
@@ -509,7 +525,7 @@ mod tests {
 			"1",
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(resolved, 1, [2], vec![vec!["A", "B"]], vec![vec!["x", "y"]]);
 	}
 
@@ -517,7 +533,7 @@ mod tests {
 	fn test_populate_to_panel_02() {
 		let input = vec!["--input", "A,B,C", "--plot", "x", "--plot", "y"];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			1,
@@ -531,7 +547,7 @@ mod tests {
 	fn test_populate_to_panel_03() {
 		let input = vec!["--input", "A,B,C", "--plot", "x", "--plot", "y", "--file-id", "1"];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			1,
@@ -545,7 +561,7 @@ mod tests {
 	fn test_populate_to_panel_04() {
 		let input = vec!["--input", "A,B,C", "--plot", "x", "--file-id", "1", "--plot", "y"];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			1,
@@ -559,7 +575,7 @@ mod tests {
 	fn test_populate_to_panel_05() {
 		let input = vec!["--input", "A,B,C", "--plot", "x", "--file-name", "E", "--plot", "y"];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			1,
@@ -581,7 +597,7 @@ mod tests {
 			"--plot", "t"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			2,
@@ -604,7 +620,7 @@ mod tests {
 			"--plot", "t"
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			2,
@@ -625,7 +641,7 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		trace!("ctx: {ctx:#?}");
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			3,
@@ -645,7 +661,7 @@ mod tests {
 			"--plot", "y",
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			3,
@@ -666,7 +682,7 @@ mod tests {
 			"--plot", "x",
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			6,
@@ -690,7 +706,7 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		tracing::trace!("config: {:#?}", config);
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			6,
@@ -714,7 +730,7 @@ mod tests {
 		];
 		let (config, ctx) = graph_cli_builder::build_from_cli_args(input).unwrap();
 		tracing::trace!("config: {:#?}", config);
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		check_lines!(
 			resolved,
 			6,
@@ -815,10 +831,10 @@ mod tests {
 				params: PanelParams::default(),
 				lines: vec![
 					Line {
-						data_source: DataSource::FieldValue {
+						data_source: DataSource::FieldValue(FieldCaptureSpec {
 							guard: None,
 							field: "duration".into(),
-						},
+						}),
 						params: LineParams::default(),
 					},
 					Line {
@@ -832,9 +848,9 @@ mod tests {
 			}],
 		};
 
-		let ctx = SharedGraphContext::new_with_input(vec!["log1.txt".into(), "log2.txt".into()]);
+		let ctx = GraphFullContext::new_with_input(vec!["log1.txt".into(), "log2.txt".into()]);
 
-		let resolved = expand_graph_config(&config, &ctx).unwrap();
+		let resolved = expand_graph_config_with_ctx(&config, &ctx).unwrap();
 		assert_eq!(resolved.panels.len(), 1);
 		assert_eq!(resolved.panels[0].lines.len(), 4); // 2 lines * 2 files
 		assert_eq!(resolved.panels[0].lines[0].source.file_name().to_string_lossy(), "log1.txt");

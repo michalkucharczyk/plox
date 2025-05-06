@@ -4,7 +4,7 @@
 //! These configs, usually written in TOML (or provided as CLI options), describe panels, fields, and layout choices.
 //! This module handles parsing them into Rust types and preparing them for further processing.
 
-use crate::error::Error;
+use crate::{error::Error, utils::common_path_ancestor};
 use annotate_snippets::{Level, Renderer, Snippet};
 use chrono::NaiveDateTime;
 use clap::{Args, Subcommand, ValueEnum};
@@ -93,38 +93,21 @@ impl TimestampFormat {
 	}
 }
 
-/// Global graph context shared across all panels and lines.
-///
-/// This includes shared configuration such as input log files and layout preferences.
-/// It is used during graph config resolution to assign each line to a specific input file.
-///
-/// # Resolution Behavior
-///
-/// - `--input <a.log> <b.log>` sets the global list of input log files.
-/// - `--per-file-panels` duplicates all panels once per input file.
-///   - Lines **without** a file or file-id will be assigned to the file from input file list,
-///   - Lines **with** an explicit `--file` or `--file-id` remain unchanged and appear in all
-///     panels.
-///
-/// This context is injected when converting from a basic [`GraphConfig`] into a
-/// fully-resolved [`crate::resolved_graph_config::ResolvedGraphConfig`] with concrete log sources.
+/// Input context for data sources, log parsing and plotting modules.
 #[derive(Args, Debug, Serialize, Deserialize, Default)]
-pub struct SharedGraphContext {
+pub struct InputFilesContext {
 	/// Input log files to be processed.
 	/// Comma-separated list of input log files to be processed.
 	#[arg(long, short = 'i', value_delimiter = ',', help_heading = "Input files")]
 	#[serde(skip)]
-	pub input: Vec<PathBuf>,
+	input: Vec<PathBuf>,
 
-	/// When enabled, creates a separate panel for each input file.
-	///
-	/// If any panel contains lines that are not explicitly bound to a file (i.e. no `file_name` or
-	/// `file_id` set), that panel will be duplicated once per input file. Each duplicated panel
-	/// will contain lines resolved to a specific file from the input list.
-	///
-	/// Panels and lines that already target specific files are unaffected by this option.
-	#[arg(long, num_args(0..=1), default_value = None, help_heading = "Panels layout",  default_missing_value = "true")]
-	per_file_panels: Option<bool>,
+	/// Directory to store parsed CSV cache files.
+	/// The full path of each log file is mirrored inside this directory to avoid name collisions.
+	/// If not set, a `.plox/` directory is created next to each log file to store its cache.
+	#[arg(long, value_name = "DIR", help_heading = "Output files")]
+	#[serde(skip)]
+	cache_dir: Option<PathBuf>,
 
 	/// The format of the timestamp which is used in logs.
 	///
@@ -146,7 +129,46 @@ pub struct SharedGraphContext {
 		help_heading = "Output files"
 	)]
 	#[serde(skip)]
-	pub force_csv_regen: bool,
+	force_csv_regen: bool,
+}
+
+/// Global graph context shared across all panels and lines.
+///
+/// This includes shared configuration such as input log files, layout preferences and output files.
+/// It is used during graph config resolution to assign each line to a specific input file and cache line.
+///
+/// Resolution Behavior:
+///
+/// - `--input <a.log> <b.log>` sets the global list of input log files.
+/// - `--per-file-panels` duplicates all panels once per input file.
+///   - Lines **without** a file or file-id will be assigned to the file from input file list,
+///   - Lines **with** an explicit `--file` or `--file-id` remain unchanged and appear in all
+///     panels.
+///
+/// This context is injected when converting from a basic [`GraphConfig`] into a
+/// fully-resolved [`crate::resolved_graph_config::ResolvedGraphConfig`] with concrete log sources.
+#[derive(Args, Debug, Serialize, Deserialize, Default)]
+pub struct GraphFullContext {
+	#[clap(flatten)]
+	#[serde(flatten)]
+	pub input_files_ctx: InputFilesContext,
+	#[clap(flatten)]
+	#[serde(flatten)]
+	pub output_graph_ctx: OutputGraphContext,
+}
+
+/// Shared graph configuration, which does not include input files.
+#[derive(Args, Debug, Serialize, Deserialize, Default)]
+pub struct OutputGraphContext {
+	/// When enabled, creates a separate panel for each input file.
+	///
+	/// If any panel contains lines that are not explicitly bound to a file (i.e. no `file_name` or
+	/// `file_id` set), that panel will be duplicated once per input file. Each duplicated panel
+	/// will contain lines resolved to a specific file from the input list.
+	///
+	/// Panels and lines that already target specific files are unaffected by this option.
+	#[arg(long, num_args(0..=1), default_value = None, help_heading = "Panels layout",  default_missing_value = "true")]
+	per_file_panels: Option<bool>,
 
 	/// Additionally writes the current graph configuration to a file in TOML format.
 	#[arg(
@@ -155,7 +177,7 @@ pub struct SharedGraphContext {
 		value_name = "CONFIG-FILE",
 		help_heading = "Output files"
 	)]
-	pub output_config_path: Option<PathBuf>,
+	output_config_path: Option<PathBuf>,
 
 	/// Path to the output PNG graph file.
 	///
@@ -164,7 +186,7 @@ pub struct SharedGraphContext {
 	///
 	/// If nothing is provided `graph.png` and `graph.gnuplot` in current directory will be stored.
 	#[arg(long, short = 'o', value_name = "FILE", help_heading = "Output files")]
-	pub output: Option<PathBuf>,
+	output: Option<PathBuf>,
 
 	/// Output filename to be placed in a location derived from the input log file paths.
 	///
@@ -182,20 +204,13 @@ pub struct SharedGraphContext {
 		value_parser = validate_standalone_filename,
 		help_heading = "Output files"
 	)]
-	pub inline_output: Option<PathBuf>,
-
-	/// Directory to store parsed CSV cache files.
-	/// The full path of each log file is mirrored inside this directory to avoid name collisions.
-	/// If not set, a `.plox/` directory is created next to each log file to store its cache.
-	#[arg(long, value_name = "DIR", help_heading = "Output files")]
-	#[serde(skip)]
-	pub cache_dir: Option<PathBuf>,
+	inline_output: Option<PathBuf>,
 
 	/// Strategy for aligning time ranges across all panels.
 	///
 	/// This determines how time-axis (x) ranges are handled when plotting.
 	#[arg(long, value_enum, conflicts_with = "time_range", help_heading = "Panels layout")]
-	pub panel_alignment_mode: Option<PanelAlignmentModeArg>,
+	panel_alignment_mode: Option<PanelAlignmentModeArg>,
 
 	/// Optional override for the global time range used in the graph.
 	///
@@ -213,18 +228,113 @@ pub struct SharedGraphContext {
 		help_heading = "Panels layout"
 	)]
 	#[serde(skip)]
-	pub time_range: Option<TimeRangeArg>,
+	time_range: Option<TimeRangeArg>,
 }
 
-impl SharedGraphContext {
+impl InputFilesContext {
 	pub fn new_with_input(input: Vec<PathBuf>) -> Self {
 		Self { input, ..Default::default() }
+	}
+
+	pub fn cache_dir(&self) -> &Option<PathBuf> {
+		&self.cache_dir
 	}
 
 	pub fn timestamp_format(&self) -> &TimestampFormat {
 		self.timestamp_format.as_ref().unwrap_or(&DEFAULT_TIMESTAMP_FORMAT)
 	}
 
+	pub fn input(&self) -> &Vec<PathBuf> {
+		&self.input
+	}
+
+	pub fn force_csv_regen(&self) -> bool {
+		self.force_csv_regen
+	}
+}
+
+impl GraphFullContext {
+	/// Intended to merge context given on CLI with one read from file
+	pub fn merge_with_other(&mut self, other: Self) {
+		macro_rules! set_if_none {
+			($($field:tt)*) => {
+				if self.$($field)*.is_none() {
+					self.$($field)* = other.$($field)*;
+				}
+			};
+		}
+
+		set_if_none!(output_graph_ctx.per_file_panels);
+		set_if_none!(input_files_ctx.timestamp_format);
+	}
+
+	pub fn new_with_input(input: Vec<PathBuf>) -> Self {
+		Self {
+			input_files_ctx: InputFilesContext { input, ..Default::default() },
+			..Default::default()
+		}
+	}
+
+	pub fn timestamp_format(&self) -> &TimestampFormat {
+		self.input_files_ctx.timestamp_format()
+	}
+
+	pub fn input(&self) -> &Vec<PathBuf> {
+		&self.input_files_ctx.input
+	}
+
+	pub fn cache_dir(&self) -> &Option<PathBuf> {
+		&self.input_files_ctx.cache_dir
+	}
+
+	#[cfg(test)]
+	pub fn per_file_panels_option(&self) -> Option<bool> {
+		self.output_graph_ctx.per_file_panels
+	}
+
+	pub fn per_file_panels(&self) -> bool {
+		self.output_graph_ctx.per_file_panels.unwrap_or(false)
+	}
+
+	/// Returns tuple containging the path to the image and the path to the gnuplot script
+	pub fn get_graph_output_path(&self) -> (PathBuf, PathBuf) {
+		if let Some(ref output_file) = self.output_graph_ctx.inline_output {
+			let common_ancestor =
+				common_path_ancestor(self.input()).unwrap_or_else(|| PathBuf::from("./"));
+			let image_path = common_ancestor.join(output_file);
+			let gnuplot_path = image_path.with_extension("gnuplot");
+			(image_path, gnuplot_path)
+		} else {
+			let def = PathBuf::from("graph.png");
+			let output_file = self.output_graph_ctx.output.as_ref().unwrap_or(&def);
+			let image_path = PathBuf::from(".").join(output_file);
+			let gnuplot_path = image_path.with_extension("gnuplot");
+			(image_path, gnuplot_path)
+		}
+	}
+
+	pub fn output_config_path(&self) -> &Option<PathBuf> {
+		&self.output_graph_ctx.output_config_path
+	}
+
+	pub fn resolved_alignment_mode(
+		&self,
+		total_range: (NaiveDateTime, NaiveDateTime),
+	) -> Result<PanelAlignmentMode, crate::align_ranges::Error> {
+		if let Some(time_range) = &self.output_graph_ctx.time_range {
+			let resolved = time_range.resolve(total_range, self.timestamp_format())?;
+			return Ok(PanelAlignmentMode::Fixed(resolved.0, resolved.1));
+		}
+
+		Ok(match self.output_graph_ctx.panel_alignment_mode {
+			Some(PanelAlignmentModeArg::SharedOverlap) => PanelAlignmentMode::SharedOverlap,
+			Some(PanelAlignmentModeArg::SharedFull) | None => PanelAlignmentMode::SharedFull,
+			Some(PanelAlignmentModeArg::PerPanel) => PanelAlignmentMode::PerPanel,
+		})
+	}
+}
+
+impl OutputGraphContext {
 	#[cfg(test)]
 	pub fn per_file_panels_option(&self) -> Option<bool> {
 		self.per_file_panels
@@ -232,20 +342,6 @@ impl SharedGraphContext {
 
 	pub fn per_file_panels(&self) -> bool {
 		self.per_file_panels.unwrap_or(false)
-	}
-
-	/// Intended to merge context given on CLI with one read from file
-	pub fn merge_with_other(&mut self, other: Self) {
-		macro_rules! set_if_none {
-			($field:ident) => {
-				if self.$field.is_none() {
-					self.$field = other.$field;
-				}
-			};
-		}
-
-		set_if_none!(per_file_panels);
-		set_if_none!(timestamp_format);
 	}
 }
 
@@ -421,6 +517,35 @@ pub enum AxisScale {
 	Log,
 }
 
+/// Describes how to capture a numeric value from log lines using an optional guard and a field pattern.
+///
+/// This specification is used by the data source to determine how to parse plotted values.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Args)]
+pub struct FieldCaptureSpec {
+	/// Optional guard string to quickly filter out log lines using `strcmp`
+	pub guard: Option<String>,
+	/// The name of the field to parse as numeric or regex.
+	/// Refer to "Plot Field Regex" help section for more details.
+	pub field: String,
+	//todo:
+	// /// Unit domain
+	// pub domain: Option<String>,
+	// /// Convert to unit
+	// pub convert_to: Option<String>,
+}
+
+/// Describes how to capture log events for calculating time deltas between consecutive matches.
+///
+/// This specification is used by the data source to compute inter-event time differences.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Args)]
+pub struct EventDeltaSpec {
+	/// Optional guard string to quickly filter out log lines using `strcmp`
+	#[arg(required = false)]
+	pub guard: Option<String>,
+	/// Substring or regex pattern to match in log lines.
+	pub pattern: String,
+}
+
 /// Represents the different ways a line's data can be sourced from logs.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Subcommand)]
 #[serde(tag = "data_source", rename_all = "snake_case")]
@@ -445,25 +570,14 @@ pub enum DataSource {
 	},
 
 	/// Plot the time delta between consecutive occurrences of `pattern`.
-	EventDelta {
-		/// Optional guard string to quickly filter out log lines using `strcmp`
-		guard: Option<String>,
-		/// Substring or regex pattern to match in log lines.
-		pattern: String,
-	},
+	EventDelta(EventDeltaSpec),
 
 	/// Plot a numeric field from logs.
 	///
 	/// This is the most common data source type.
 	#[serde(untagged)]
 	#[clap(name = "plot")]
-	FieldValue {
-		/// Optional guard string to quickly filter out log lines using `strcmp`
-		guard: Option<String>,
-		/// The name of the field to parse as numeric or regex.
-		/// Refer to "Plot Field Regex" help section for more details.
-		field: String,
-	},
+	FieldValue(FieldCaptureSpec),
 }
 
 impl DataSource {
@@ -476,11 +590,11 @@ impl DataSource {
 	}
 
 	pub fn new_event_delta(guard: Option<String>, pattern: String) -> Self {
-		DataSource::EventDelta { guard, pattern }
+		DataSource::EventDelta(EventDeltaSpec { guard, pattern })
 	}
 
 	pub fn new_plot_field(guard: Option<String>, field: String) -> Self {
-		DataSource::FieldValue { guard, field }
+		DataSource::FieldValue(FieldCaptureSpec { guard, field })
 	}
 }
 

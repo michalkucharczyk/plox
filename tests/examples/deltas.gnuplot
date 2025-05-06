@@ -1,5 +1,5 @@
 set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500
-set output './tests/examples/deltas.png'
+set output './tests/.output/deltas.png'
 set linetype 1 lc rgb "red" dt 1 pt 7 lw 2.0 ps 4.0
 set linetype 2 lc rgb "blue" dt 1 pt 9 lw 2.0 ps 4.0
 set linetype 3 lc rgb "dark-green" dt 1 pt 5 lw 2.0 ps 4.0
@@ -43,8 +43,8 @@ set xrange ["2020-01-01T00:01:41":"2020-01-01T00:15:44"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__foo_module__delta_SOME_EVENT.csv'
 csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__foo_module__delta_SOME_EVENT.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'delta' with points pt 12 ps 7 lc rgb "olive" axes x1y1 title 'delta SOME_EVENT', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'count' with steps axes x1y2 title 'count of SOME_EVENT'
+   csv_data_file_0000 using (combine_datetime('date','time')):'delta' with points pt 12 ps 7 lc rgb "olive" axes x1y1 title 'delta foo_module SOME_EVENT', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'count' with steps axes x1y2 title 'count of foo_module SOME_EVENT | y2'
 unset y2tics
 unset my2tics
 unset multiplot

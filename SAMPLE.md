@@ -11,7 +11,7 @@ Plot a single numeric field:
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/default.log \
-	  --output tests/examples/default.png \
+	  --output tests/.output/default.png \
 	  --plot om_module x
 
 ```
@@ -30,7 +30,7 @@ Sample matching line ([`log`](tests/examples/default.log)):
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/default.log \
-	  --output tests/examples/regex.png \
+	  --output tests/.output/regex.png \
 	  --plot yam_module "y=\([\d\.]+,\s*([\d\.]+)\)" \
 	  --title "1st tuple item" \
 	  --plot yam_module "y=\(([\d\.]+),\s*[\d\.]+\)" \
@@ -57,7 +57,7 @@ Sample matching line ([`log`](tests/examples/default.log)):
 ```rust,ignore
 plox graph \
 	  --input tests/examples/default.log \
-	  --output tests/examples/deltas.png \
+	  --output tests/.output/deltas.png \
 	  --event-delta foo_module "SOME_EVENT" --yaxis-scale log \
 	  --style points --marker-size 7 --marker-color olive --marker-type diamond \
 	  --event-count foo_module "SOME_EVENT" --style steps --yaxis y2
@@ -88,7 +88,7 @@ is also customized. Three panels with multiple data lines are plotted.
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
-	  --output tests/examples/panels.png \
+	  --output tests/.output/panels.png \
 	  --timestamp-format "[%s]" \
 	  --plot om_module x \
 	  --panel \
@@ -119,7 +119,7 @@ Draw a graph defined in 👉 [`demo lines`](tests/examples/demo-lines.toml) TOML
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
-	  --output tests/examples/demo-lines.png \
+	  --output tests/.output/demo-lines.png \
 	  --config tests/examples/demo-lines.toml
 
 ```
@@ -136,7 +136,7 @@ One of `plox`'s most powerful features is the ability to **compare multiple log 
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/default.log,tests/examples/default-other.log \
-	  --output tests/examples/panels-two-files.png \
+	  --output tests/.output/panels-two-files.png \
 	  --per-file-panels \
 	  --plot om_module x \
 	  --panel \
@@ -161,7 +161,7 @@ Similarly, a graph config file can be re-used with many log files:
 plox graph \
 	  --input  tests/examples/default.log \
 	  --input  tests/examples/default-other.log \
-	  --output tests/examples/demo-lines-two-files.png \
+	  --output tests/.output/demo-lines-two-files.png \
 	  --timestamp-format "%Y-%m-%d %H:%M:%S%.3f" \
 	  --per-file-panels \
 	  --config tests/examples/demo-lines.toml

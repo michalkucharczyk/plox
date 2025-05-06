@@ -28,7 +28,7 @@ For some examples refer to [sample gallery](https://github.com/michalkucharczyk/
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
-	  --output tests/examples/panels.png \
+	  --output tests/.output/panels.png \
 	  --timestamp-format "[%s]" \
 	  --plot om_module x \
 	  --panel \

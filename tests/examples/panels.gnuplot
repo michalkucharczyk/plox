@@ -1,5 +1,5 @@
 set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500
-set output './tests/examples/panels.png'
+set output './tests/.output/panels.png'
 set linetype 1 lc rgb "red" dt 1 pt 7 lw 2.0 ps 4.0
 set linetype 2 lc rgb "blue" dt 1 pt 9 lw 2.0 ps 4.0
 set linetype 3 lc rgb "dark-green" dt 1 pt 5 lw 2.0 ps 4.0
@@ -43,8 +43,8 @@ set xrange ["2019-12-31T23:00:00":"2019-12-31T23:16:33"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__foo_module__value_1_SOME_EVENT.csv'
 csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__foo_module__value_1_SOME_EVENT.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'count' with lines axes x1y1 title 'count of SOME_EVENT', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y2 title 'presence of SOME_EVENT'
+   csv_data_file_0000 using (combine_datetime('date','time')):'count' with lines axes x1y1 title 'count of foo_module SOME_EVENT', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y2 title 'presence of foo_module SOME_EVENT | y2'
 unset y2tics
 unset my2tics
 set origin 0.0,0.3283333333333333
@@ -52,13 +52,13 @@ set size 1.0,0.3283333333333333
 unset label
 unset logscale y
 set xrange ["2019-12-31T23:00:00":"2019-12-31T23:16:33"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
-csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__x03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx02%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0002 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx03%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x01', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x02', \
-   csv_data_file_0002 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x03'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x_module x01', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x_module x02', \
+   csv_data_file_0002 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x_module x03'
 unset y2tics
 unset my2tics
 set origin 0.0,0.6566666666666666
@@ -66,9 +66,9 @@ set size 1.0,0.3283333333333333
 unset label
 unset logscale y
 set xrange ["2019-12-31T23:00:00":"2019-12-31T23:16:33"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__om_module__x%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__om_module__%5Cbx%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of x'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title 'value of om_module x'
 unset y2tics
 unset my2tics
 unset multiplot
