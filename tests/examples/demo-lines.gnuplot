@@ -1,5 +1,5 @@
 set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500
-set output './tests/examples/demo-lines.png'
+set output './tests/.output/demo-lines.png'
 set linetype 1 lc rgb "red" dt 1 pt 7 lw 2.0 ps 4.0
 set linetype 2 lc rgb "blue" dt 1 pt 9 lw 2.0 ps 4.0
 set linetype 3 lc rgb "dark-green" dt 1 pt 5 lw 2.0 ps 4.0
@@ -50,17 +50,17 @@ csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/s
 csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x00', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x01', \
-   csv_data_file_0002 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x02', \
-   csv_data_file_0003 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x03', \
-   csv_data_file_0004 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x04', \
-   csv_data_file_0005 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x05', \
-   csv_data_file_0006 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x06', \
-   csv_data_file_0007 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x07', \
-   csv_data_file_0008 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x08', \
-   csv_data_file_0009 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x09', \
-   csv_data_file_0010 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x10'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x00', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x01', \
+   csv_data_file_0002 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x02', \
+   csv_data_file_0003 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x03', \
+   csv_data_file_0004 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x04', \
+   csv_data_file_0005 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x05', \
+   csv_data_file_0006 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x06', \
+   csv_data_file_0007 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x07', \
+   csv_data_file_0008 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x08', \
+   csv_data_file_0009 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x09', \
+   csv_data_file_0010 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of x_module x10'
 unset y2tics
 unset my2tics
 set origin 0.0,0.3283333333333333
@@ -81,17 +81,17 @@ csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/s
 csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x00', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x01', \
-   csv_data_file_0002 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x02', \
-   csv_data_file_0003 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x03', \
-   csv_data_file_0004 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x04', \
-   csv_data_file_0005 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x05', \
-   csv_data_file_0006 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x06', \
-   csv_data_file_0007 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x07', \
-   csv_data_file_0008 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x08', \
-   csv_data_file_0009 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x09', \
-   csv_data_file_0010 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x10'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x00', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x01', \
+   csv_data_file_0002 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x02', \
+   csv_data_file_0003 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x03', \
+   csv_data_file_0004 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x04', \
+   csv_data_file_0005 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x05', \
+   csv_data_file_0006 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x06', \
+   csv_data_file_0007 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x07', \
+   csv_data_file_0008 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x08', \
+   csv_data_file_0009 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x09', \
+   csv_data_file_0010 using (combine_datetime('date','time')):'value' with linespoints ps 2 axes x1y1 title 'value of x_module x10'
 unset y2tics
 unset my2tics
 set origin 0.0,0.6566666666666666
@@ -112,17 +112,17 @@ csv_data_file_0008 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/s
 csv_data_file_0009 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx09%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 csv_data_file_0010 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx10%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x00', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x01', \
-   csv_data_file_0002 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x02', \
-   csv_data_file_0003 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x03', \
-   csv_data_file_0004 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x04', \
-   csv_data_file_0005 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x05', \
-   csv_data_file_0006 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x06', \
-   csv_data_file_0007 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x07', \
-   csv_data_file_0008 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x08', \
-   csv_data_file_0009 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x09', \
-   csv_data_file_0010 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x10'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x00', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x01', \
+   csv_data_file_0002 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x02', \
+   csv_data_file_0003 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x03', \
+   csv_data_file_0004 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x04', \
+   csv_data_file_0005 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x05', \
+   csv_data_file_0006 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x06', \
+   csv_data_file_0007 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x07', \
+   csv_data_file_0008 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x08', \
+   csv_data_file_0009 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x09', \
+   csv_data_file_0010 using (combine_datetime('date','time')):'value' with steps axes x1y1 title 'value of x_module x10'
 unset y2tics
 unset my2tics
 unset multiplot

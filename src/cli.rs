@@ -77,19 +77,71 @@ pub enum CliCommand {
 #[derive(Clone, Debug, PartialEq, Subcommand)]
 pub enum StatDataSource {
 	/// Extract the time delta between consecutive occurrences of `pattern`.
-	EventDelta(EventDeltaSpec),
+	EventDelta(RawEventDeltaSpec),
 
 	/// Extract a numeric field from logs.
 	///
 	/// This is the most common data source type.
-	FieldValue(FieldCaptureSpec),
+	FieldValue(RawFieldCaptureSpec),
+}
+
+#[derive(Args, Debug, Clone, PartialEq)]
+pub struct RawFieldCaptureSpec {
+	/// [GUARD] - Optional guard string to quickly filter out log lines using `strcmp`
+	///
+	/// <FIELD> - The name of the field to parse as numeric or regex.
+	///
+	/// Refer to "Plot Field Regex" help section for more details.
+	///
+	/// Provide either just <FIELD>, or <GUARD> <FIELD>.
+	#[arg(required = true, num_args = 1..=2, value_names = ["GUARD", "FIELD"])]
+	pub inputs: Vec<String>,
+}
+
+impl From<RawFieldCaptureSpec> for FieldCaptureSpec {
+	fn from(raw: RawFieldCaptureSpec) -> Self {
+		match raw.inputs.len() {
+			1 => FieldCaptureSpec { guard: None, field: raw.inputs[0].clone() },
+			2 => FieldCaptureSpec {
+				guard: Some(raw.inputs[0].clone()),
+				field: raw.inputs[1].clone(),
+			},
+			_ => panic!("clap args mess. this is bug"),
+		}
+	}
+}
+
+#[derive(Args, Debug, Clone, PartialEq)]
+pub struct RawEventDeltaSpec {
+	/// [GUARD] - Optional guard string to quickly filter out log lines using `strcmp`
+	///
+	/// <FIELD> - Substring or regex pattern to match in log lines.
+	///
+	/// Refer to "Plot Field Regex" help section for more details.
+	///
+	/// Provide either just <FIELD>, or <GUARD> <FIELD>.
+	#[arg(required = true, num_args = 1..=2, value_names = ["GUARD", "FIELD"])]
+	pub inputs: Vec<String>,
+}
+
+impl From<RawEventDeltaSpec> for EventDeltaSpec {
+	fn from(raw: RawEventDeltaSpec) -> Self {
+		match raw.inputs.len() {
+			1 => EventDeltaSpec { guard: None, pattern: raw.inputs[0].clone() },
+			2 => EventDeltaSpec {
+				guard: Some(raw.inputs[0].clone()),
+				pattern: raw.inputs[1].clone(),
+			},
+			_ => panic!("clap args mess. this is bug"),
+		}
+	}
 }
 
 impl From<StatDataSource> for DataSource {
 	fn from(value: StatDataSource) -> Self {
 		match value {
-			StatDataSource::FieldValue(spec) => DataSource::FieldValue(spec),
-			StatDataSource::EventDelta(spec) => DataSource::EventDelta(spec),
+			StatDataSource::FieldValue(spec) => DataSource::FieldValue(spec.into()),
+			StatDataSource::EventDelta(spec) => DataSource::EventDelta(spec.into()),
 		}
 	}
 }
@@ -126,4 +178,6 @@ pub fn build_cli() -> clap::Command {
 	Cli::command()
 		.subcommand(crate::graph_cli_builder::build_cli())
 		.subcommand(crate::match_preview_cli_builder::build_cli())
+		.mut_subcommand("stat", |subcmd| subcmd.after_long_help(EXTRA_HELP))
+		.mut_subcommand("cat", |subcmd| subcmd.after_long_help(EXTRA_HELP))
 }

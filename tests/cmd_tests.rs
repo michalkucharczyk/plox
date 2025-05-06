@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader};
 macro_rules! bash(
 	( plox $($a:tt)* ) => {{
 		let bin_path = env!("CARGO_BIN_EXE_plox");
-		let status = spawn_with_output!($bin_path -vv $($a)*)
+		let status = spawn_with_output!($bin_path $($a)*)
 			.expect("process running")
 			.wait_with_output();
 
@@ -35,13 +35,13 @@ macro_rules! bash(
 			panic!("Execution of plox failed. {}", output.join("\n"));
 		}
 
-		Default::default()
+		status.unwrap()
 	}}
 );
 
 fn compare_files(file: &str) {
 	let path1 = format!("tests/examples/{}", file);
-	let path2 = format!("tests/.examples-expected/{}", file);
+	let path2 = format!("tests/.output/{}", file);
 	compare_files_inner(&path1, &path2);
 }
 
@@ -84,7 +84,7 @@ fn cmd_simple() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/default.log
-		  --output tests/examples/default.png
+		  --output tests/.output/default.png
 		  --plot om_module x
 	)
 }
@@ -101,7 +101,7 @@ fn cmd_simple_panels() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/some.log
-		  --output tests/examples/panels.png
+		  --output tests/.output/panels.png
 		  --timestamp-format "[%s]"
 		  --plot om_module x
 		  --panel
@@ -126,7 +126,7 @@ fn cmd_demo_lines() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/some.log
-		  --output tests/examples/demo-lines.png
+		  --output tests/.output/demo-lines.png
 		  --config tests/examples/demo-lines.toml
 	)
 }
@@ -143,7 +143,7 @@ fn cmd_regex() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/default.log
-		  --output tests/examples/regex.png
+		  --output tests/.output/regex.png
 		  --plot yam_module r#"y=\([\d\.]+,\s*([\d\.]+)\)"#
 		  --title "1st tuple item"
 		  --plot yam_module r#"y=\(([\d\.]+),\s*[\d\.]+\)"#
@@ -163,7 +163,7 @@ fn cmd_deltas_and_count() -> String {
 	bash!(
 		plox graph
 		  --input tests/examples/default.log
-		  --output tests/examples/deltas.png
+		  --output tests/.output/deltas.png
 		  --event-delta foo_module "SOME_EVENT" --yaxis-scale log
 		  --style points --marker-size 7 --marker-color olive --marker-type diamond
 		  --event-count foo_module "SOME_EVENT" --style steps --yaxis y2
@@ -182,7 +182,7 @@ fn cmd_simple_panels_two_files() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/default.log,tests/examples/default-other.log
-		  --output tests/examples/panels-two-files.png
+		  --output tests/.output/panels-two-files.png
 		  --per-file-panels
 		  --plot om_module x
 		  --panel
@@ -208,7 +208,7 @@ fn cmd_demo_lines_two_files() -> String {
 		plox graph
 		  --input  tests/examples/default.log
 		  --input  tests/examples/default-other.log
-		  --output tests/examples/demo-lines-two-files.png
+		  --output tests/.output/demo-lines-two-files.png
 		  --timestamp-format "%Y-%m-%d %H:%M:%S%.3f"
 		  --per-file-panels
 		  --config tests/examples/demo-lines.toml
@@ -227,13 +227,47 @@ fn test_cmd_demo_lines_two_files() {
 fn test_cmd_bad_timestamp() {
 	bash!(
 		plox graph --input  tests/examples/bad_timestamps.log --plot om_module x
-	)
+	);
 }
 
 #[test]
-#[should_panic(expected = "No matches.")]
+#[should_panic(expected = "No data or bad timestamp or bad guard/regex?")]
 fn test_cmd_bad_guard() {
 	bash!(
 		plox graph --input  tests/examples/default.log --plot nonexistingguard x -f
-	)
+	);
+}
+
+#[test]
+fn test_cmd_cat_bad_guard() {
+	let output = bash!(
+		plox cat --input tests/examples/default-other.log field-value xxxxxx xx
+	);
+	assert!(output.contains("No matches"));
+}
+
+#[test]
+fn test_cmd_cat_works() {
+	let output = bash!(
+		plox cat --input tests/examples/default-other.log field-value om_module x
+	);
+	let expected = r#"1000.0
+955.28
+924.01
+931.19
+918.8
+880.13
+775.81
+550.87
+612.5
+522.57
+489.92
+401.38
+129.65
+103.89
+28.53
+194.17
+105.11"#;
+
+	assert_eq!(output, expected);
 }

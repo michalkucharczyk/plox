@@ -4,7 +4,7 @@
 
 use crate::{
 	graph_config::{
-		DataSource, EventDeltaSpec, FieldCaptureSpec, InputFilesContext, TimestampFormat,
+		DataSource, EventDeltaSpec, FieldCaptureSpec, InputFilesContext, TimestampFormat, YAxis,
 	},
 	logging::APPV,
 	match_preview_cli_builder::{MatchPreviewConfig, SharedMatchPreviewContext},
@@ -267,6 +267,10 @@ impl ResolvedLine {
 		self.line.data_source.raw_pattern()
 	}
 
+	pub fn regex_pattern(&self) -> String {
+		self.line.data_source.regex_pattern()
+	}
+
 	pub fn title(&self, multi_input_files: bool) -> String {
 		let file_stem = self
 			.source
@@ -275,7 +279,8 @@ impl ResolvedLine {
 			.expect("filename is validated at this point")
 			.to_string_lossy();
 		let title = self.line.params.title.clone().unwrap_or(self.line.data_source.title());
-		if multi_input_files { format!("{} ({})", title, file_stem) } else { title }
+		let title = if multi_input_files { format!("{} ({})", title, file_stem) } else { title };
+		if self.line.params.yaxis == Some(YAxis::Y2) { format!("{} | y2", title) } else { title }
 	}
 
 	pub fn source_file_name(&self) -> &PathBuf {
@@ -299,10 +304,30 @@ impl DataSource {
 
 	pub fn title(&self) -> String {
 		match &self {
-			DataSource::FieldValue { .. } => format!("value of {}", self.raw_pattern()),
-			DataSource::EventValue { .. } => format!("presence of {}", self.raw_pattern()),
-			DataSource::EventCount { .. } => format!("count of {}", self.raw_pattern()),
-			DataSource::EventDelta { .. } => format!("delta {}", self.raw_pattern()),
+			DataSource::FieldValue(FieldCaptureSpec { guard: Some(guard), .. }) => {
+				format!("value of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventValue { guard: Some(guard), .. } => {
+				format!("presence of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventCount { guard: Some(guard), .. } => {
+				format!("count of {} {}", guard, self.raw_pattern())
+			},
+			DataSource::EventDelta(EventDeltaSpec { guard: Some(guard), .. }) => {
+				format!("delta {} {}", guard, self.raw_pattern())
+			},
+			DataSource::FieldValue(FieldCaptureSpec { guard: None, .. }) => {
+				format!("value of {}", self.raw_pattern())
+			},
+			DataSource::EventValue { guard: None, .. } => {
+				format!("presence of {}", self.raw_pattern())
+			},
+			DataSource::EventCount { guard: None, .. } => {
+				format!("count of {}", self.raw_pattern())
+			},
+			DataSource::EventDelta(EventDeltaSpec { guard: None, .. }) => {
+				format!("delta {}", self.raw_pattern())
+			},
 		}
 	}
 
@@ -569,15 +594,7 @@ pub fn process_inputs(
 		// Write all output files
 		for (_, processor) in processors {
 			assert_eq!(log_file_name, processor.input_file_name);
-			if processor.records.is_empty() {
-				warn!(
-					target:APPV,
-					input_file = ?log_file_name.display(),
-					guard = ?processor.data_source.guard(),
-					regex = processor.data_source.regex_pattern(),
-					"No matches."
-				);
-			} else {
+			if !processor.records.is_empty() {
 				debug!(
 					target:APPV,
 					"Processed input file: {}, regex: {}, matched {}, cache file: {}",
@@ -587,6 +604,7 @@ pub fn process_inputs(
 					processor.expect_output_path().display()
 				);
 			}
+
 			processor.write_csv()?;
 		}
 	}
@@ -674,7 +692,30 @@ impl ResolvedGraphConfig {
 					File::open(&file_path).map_err(|e| Error::new_file_io_error(&file_path, e))?;
 				let reader = io::BufReader::new(file);
 
-				line.set_data_points_count(reader.lines().count() - 1);
+				let data_points_count = reader.lines().count() - 1;
+				line.set_data_points_count(data_points_count);
+
+				let log_file_name = line.source_file_name();
+				if data_points_count == 0 {
+					warn!(
+						target:APPV,
+						input_file = ?log_file_name.display(),
+						guard = ?line.guard(),
+						regex = line.regex_pattern(),
+						"No matches."
+					);
+				} else {
+					debug!(
+						target:APPV,
+						"Matched {} entries: {}{}, user-pattern: {}, regex: {}, cache file: {}",
+						data_points_count,
+						log_file_name.display(),
+						line.guard().clone().map(|v| format!(", guard: {v}")).unwrap_or_default(),
+						line.raw_pattern(),
+						line.regex_pattern(),
+						line.expect_shared_csv_filename().display()
+					);
+				}
 			}
 		}
 		Ok(())
@@ -848,7 +889,6 @@ impl fmt::Display for PloxHisto {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		use std::fmt::Write;
 
-		//todo: could be exposed via cli
 		let width = self.width.unwrap_or(10);
 		let precision = self.precision.unwrap_or(4);
 
@@ -939,45 +979,66 @@ pub fn display_stats(
 	width: Option<usize>,
 	precision: Option<usize>,
 ) -> Result<(), Error> {
-	let mut values: Vec<f64> = vec![];
-	for line in config.all_lines() {
+	let lines_count = config.all_lines_count();
+
+	for (i, line) in config.all_lines().enumerate() {
 		let filename = line.expect_shared_csv_filename();
 		let mut rdr = csv::Reader::from_path(&filename)
 			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		let mut values: Vec<f64> = vec![];
 		for result in rdr.deserialize() {
 			let record: LogRecord =
 				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
-			values.push(record.value);
+
+			match &line.line.data_source {
+				DataSource::FieldValue { .. } => values.push(record.value),
+				DataSource::EventDelta { .. } => {
+					record.diff.inspect(|v| values.push(*v));
+				},
+				_ => {
+					unreachable!("this is bug.");
+				},
+			};
 		}
+		let mut h = PloxHisto::with_buckets(buckets_count, width, precision);
+		let mean: average::Mean = values.iter().collect();
+		let max: average::Max = values.iter().collect();
+		let min: average::Min = values.iter().collect();
+		let mut q99 = average::Quantile::new(0.99);
+		let mut q95 = average::Quantile::new(0.95);
+		let mut q90 = average::Quantile::new(0.9);
+		let mut q75 = average::Quantile::new(0.75);
+		let mut q50 = average::Quantile::new(0.5);
+		values.iter().for_each(|x| {
+			h.histogram.add(*x);
+			q99.add(*x);
+			q95.add(*x);
+			q90.add(*x);
+			q50.add(*x);
+			q75.add(*x)
+		});
+		if i > 0 {
+			println!("-------------------------");
+		}
+
+		if lines_count > 1 {
+			println!("file: {}", line.source.file_name().display());
+		}
+		println!(" count: {}", values.len());
+		if values.is_empty() {
+			continue;
+		}
+		println!("   min: {}", min.min());
+		println!("   max: {}", max.max());
+		println!("  mean: {}", mean.mean());
+		println!("median: {}", q50.quantile());
+		println!("   q75: {}", q75.quantile());
+		println!("   q90: {}", q90.quantile());
+		println!("   q95: {}", q95.quantile());
+		println!("   q99: {}", q99.quantile());
+		println!("\n{h}");
 	}
 
-	let mut h = PloxHisto::with_buckets(buckets_count, width, precision);
-	let mean: average::Mean = values.iter().collect();
-	let max: average::Max = values.iter().collect();
-	let min: average::Min = values.iter().collect();
-	let mut q99 = average::Quantile::new(0.99);
-	let mut q95 = average::Quantile::new(0.95);
-	let mut q90 = average::Quantile::new(0.9);
-	let mut q75 = average::Quantile::new(0.75);
-	let mut q50 = average::Quantile::new(0.5);
-	values.iter().for_each(|x| {
-		h.histogram.add(*x);
-		q99.add(*x);
-		q95.add(*x);
-		q90.add(*x);
-		q50.add(*x);
-		q75.add(*x)
-	});
-	println!(" count: {}", mean.len());
-	println!("   min: {}", min.min());
-	println!("   max: {}", max.max());
-	println!("  mean: {}", mean.mean());
-	println!("median: {}", q50.quantile());
-	println!("   q75: {}", q75.quantile());
-	println!("   q90: {}", q90.quantile());
-	println!("   q95: {}", q95.quantile());
-	println!("   q99: {}", q99.quantile());
-	println!("{h}");
 	Ok(())
 }
 
@@ -993,7 +1054,16 @@ pub fn display_values(config: &ResolvedGraphConfig) -> Result<(), Error> {
 		for result in rdr.deserialize() {
 			let record: LogRecord =
 				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
-			println!("{:?}", record.value);
+
+			match &line.line.data_source {
+				DataSource::FieldValue { .. } => println!("{:?}", record.value),
+				DataSource::EventDelta { .. } => {
+					record.diff.inspect(|v| println!("{:?}", v));
+				},
+				_ => {
+					unreachable!("this is bug.");
+				},
+			};
 		}
 	}
 	Ok(())

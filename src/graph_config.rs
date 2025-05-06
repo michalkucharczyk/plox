@@ -540,6 +540,7 @@ pub struct FieldCaptureSpec {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Args)]
 pub struct EventDeltaSpec {
 	/// Optional guard string to quickly filter out log lines using `strcmp`
+	#[arg(required = false)]
 	pub guard: Option<String>,
 	/// Substring or regex pattern to match in log lines.
 	pub pattern: String,

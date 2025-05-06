@@ -29,7 +29,7 @@ pub enum Error {
 	Generic(String),
 	#[error("Error while parsing CVS date: {0} (this is bug)")]
 	CvsDateParseError(#[from] chrono::ParseError),
-	#[error("Empty ranges for all lines. No data or bad timestamp or bad regex?")]
+	#[error("Empty ranges for all lines. No data or bad timestamp or bad guard/regex?")]
 	EmptyRangeError,
 }
 
