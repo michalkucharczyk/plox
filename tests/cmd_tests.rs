@@ -271,3 +271,68 @@ fn test_cmd_cat_works() {
 
 	assert_eq!(output, expected);
 }
+
+#[test]
+fn test_cmd_cat_works2() {
+	let output = bash!(
+		plox cat
+		  --input tests/examples/some.log
+		  --timestamp-format "[%s]"
+		  field-value yam_module r#"y=\([\d\.]+,\s*([\d\.]+)\)"#
+	);
+	let expected = r#"26.026026
+261.261261
+296.296296
+303.303303
+332.332332
+356.356356
+377.377377
+403.403403
+486.486486
+588.588589
+626.626627
+637.637638
+655.655656
+661.661662
+670.670671
+706.706707
+740.740741
+824.824825
+870.870871
+916.916917
+947.947948
+959.95996"#;
+	assert_eq!(output, expected);
+}
+
+#[docify::export_content]
+fn cmd_stat1() -> String {
+	bash!(
+		plox stat
+		  --input  tests/examples/default.log
+		  field-value om_module x
+	)
+}
+
+#[docify::export_content]
+fn cmd_stat2() -> String {
+	bash!(
+		plox stat
+		  --input tests/examples/some.log
+		  --timestamp-format "[%s]"
+		  field-value om_module x
+	)
+}
+
+#[test]
+fn test_cmd_stat1() {
+	cmd_stat1();
+}
+
+#[test]
+fn test_cmd_stat2() {
+	cmd_stat2();
+}
+
+//something to consider:
+//datamash mean 1 count 1 max 1 min 1 perc:99 1 perc:95 1 perc:90 1 perc:75 1

@@ -1030,6 +1030,7 @@ mod tests {
 			// line 1
 			"--plot", "xxx", "yyy",
 				"--file-name", "plot1.log",
+				"--style", "lines",
 				"--yaxis", "y",
 				"--line-color", "red",
 				"--marker-type", "circle",
@@ -1037,6 +1038,7 @@ mod tests {
 			// line 2
 			"--event-count", "duration",
 				"--file-name", "plot2.log",
+				"--style", "lines",
 				"--yaxis", "y2",
 				"--line-color", "dark-turquoise",
 				"--marker-type", "dot",
@@ -1097,6 +1099,7 @@ mod tests {
 				.with_line(
 					LineBuilder::new()
 						.with_plot_field_line(Some("xxx".into()), "yyy".into())
+						.apply_param(LineParam::PlotStyle(PlotStyle::Lines))
 						.apply_param(LineParam::LineColor("red".into()))
 						.apply_param(LineParam::MarkerType("circle".into()))
 						.apply_param(LineParam::MarkerColor("blue".into()))
@@ -1108,6 +1111,7 @@ mod tests {
 				.with_line(
 					LineBuilder::new()
 						.with_event_count_line(None, "duration".into())
+						.apply_param(LineParam::PlotStyle(PlotStyle::Lines))
 						.apply_param(LineParam::LineColor("dark-turquoise".into()))
 						.apply_param(LineParam::MarkerType("dot".into()))
 						.apply_param(LineParam::MarkerColor("black".into()))

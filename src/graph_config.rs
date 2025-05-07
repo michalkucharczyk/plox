@@ -397,7 +397,7 @@ pub struct LineParams {
 	pub title: Option<String>,
 
 	/// The style of the plotted line
-	#[arg(long, default_value = "lines")]
+	#[arg(long, default_value = "points")]
 	#[serde(default)]
 	pub style: PlotStyle,
 
@@ -671,10 +671,10 @@ impl FromStr for MarkerType {
 #[serde(rename_all = "kebab-case")]
 pub enum PlotStyle {
 	#[default]
-	Lines,
-	Steps,
 	Points,
+	Steps,
 	LinesPoints,
+	Lines,
 }
 
 impl FromStr for PlotStyle {

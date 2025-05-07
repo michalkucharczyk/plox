@@ -41,8 +41,8 @@ set xrange ["2020-01-01T00:00:18":"2020-01-01T00:16:34"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__yam_module__y%3D%5C%28%5B%5Cd%5C.%5D%2B%2C%5Cs%2A%28%5B%5Cd%5C.%5D%2B%29%5C%29.csv'
 csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__yam_module__y%3D%5C%28%28%5B%5Cd%5C.%5D%2B%29%2C%5Cs%2A%5B%5Cd%5C.%5D%2B%5C%29.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with lines axes x1y1 title '1st tuple item', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with lines axes x1y1 title '2nd tuple item'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title '1st tuple item', \
+   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title '2nd tuple item'
 unset y2tics
 unset my2tics
 unset multiplot

@@ -21,6 +21,9 @@ For some examples refer to [sample gallery](https://github.com/michalkucharczyk/
   - Time deltas between events,
 - Reusable graph layouts via TOML config files
 - Outputs PNGs (via gnuplot) and per-line CSV caches for fast redraws
+- Also includes:
+  - `stat` → summary stats + histograms over extracted data
+  - `cat` → raw listing of extracted numeric values
 
 
 ## 🧪 Example
@@ -174,6 +177,40 @@ style = "steps"
 line_color = "blue"
 line_width=2
 title="unwatched txs"
+```
+
+---
+
+## 📊 Displaying Stats and Raw Values
+
+Working with extracted datasets often benefits from quick statistical insight, and `plox` provides built-in tools for that.
+
+<!-- docify::embed!("tests/cmd_tests.rs", cmd_stat1) -->
+
+This command displays basic statistics (count, min, max, mean, median, percentiles) and shows an ASCII histogram to help you quickly understand the distribution of extracted values:
+```ignore
+ count: 25
+   min: 27.03
+   max: 1000
+  mean: 613.4932000000001
+median: 949.95
+   q75: 949.95
+   q90: 949.95
+   q95: 949.95
+   q99: 949.95
+
+# Each ∎ is a count of 1
+#
+   27.0300 -   124.5270 [ 3 ]: ∎∎∎
+  124.5270 -   222.0240 [ 1 ]: ∎
+  222.0240 -   319.5210 [ 0 ]:
+  319.5210 -   417.0180 [ 2 ]: ∎∎
+  417.0180 -   514.5150 [ 2 ]: ∎∎
+  514.5150 -   612.0120 [ 3 ]: ∎∎∎
+  612.0120 -   709.5090 [ 3 ]: ∎∎∎
+  709.5090 -   807.0060 [ 3 ]: ∎∎∎
+  807.0060 -   904.5030 [ 3 ]: ∎∎∎
+  904.5030 -  1002.0000 [ 5 ]: ∎∎∎∎∎
 ```
 
 ---

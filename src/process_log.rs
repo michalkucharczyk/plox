@@ -971,8 +971,9 @@ impl fmt::Display for PloxHisto {
 		Ok(())
 	}
 }
-
-use average::Estimate;
+use statrs::statistics::Data;
+use statrs::statistics::OrderStatistics;
+use statrs::statistics::Statistics;
 pub fn display_stats(
 	config: &ResolvedGraphConfig,
 	buckets_count: u64,
@@ -1001,21 +1002,8 @@ pub fn display_stats(
 			};
 		}
 		let mut h = PloxHisto::with_buckets(buckets_count, width, precision);
-		let mean: average::Mean = values.iter().collect();
-		let max: average::Max = values.iter().collect();
-		let min: average::Min = values.iter().collect();
-		let mut q99 = average::Quantile::new(0.99);
-		let mut q95 = average::Quantile::new(0.95);
-		let mut q90 = average::Quantile::new(0.9);
-		let mut q75 = average::Quantile::new(0.75);
-		let mut q50 = average::Quantile::new(0.5);
 		values.iter().for_each(|x| {
 			h.histogram.add(*x);
-			q99.add(*x);
-			q95.add(*x);
-			q90.add(*x);
-			q50.add(*x);
-			q75.add(*x)
 		});
 		if i > 0 {
 			println!("-------------------------");
@@ -1028,14 +1016,16 @@ pub fn display_stats(
 		if values.is_empty() {
 			continue;
 		}
-		println!("   min: {}", min.min());
-		println!("   max: {}", max.max());
-		println!("  mean: {}", mean.mean());
-		println!("median: {}", q50.quantile());
-		println!("   q75: {}", q75.quantile());
-		println!("   q90: {}", q90.quantile());
-		println!("   q95: {}", q95.quantile());
-		println!("   q99: {}", q99.quantile());
+		println!("   min: {}", Statistics::min(&values));
+		println!("   max: {}", Statistics::max(&values));
+		println!("  mean: {}", Statistics::mean(&values));
+
+		let mut data = Data::new(values);
+		println!("median: {}", data.percentile(50));
+		println!("   q75: {}", data.percentile(75));
+		println!("   q90: {}", data.percentile(90));
+		println!("   q95: {}", data.percentile(95));
+		println!("   q99: {}", data.percentile(99));
 		println!("\n{h}");
 	}
 
