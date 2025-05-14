@@ -105,7 +105,7 @@ Working with extracted datasets often benefits from quick statistical insight, a
 ```rust,ignore
 plox stat \
 	  --input tests/examples/checker.log \
-	  field-value duration
+	  field-value TRACE duration
 
 ```
 
