@@ -304,7 +304,7 @@ pub fn write_gnuplot_script(
 	Ok(())
 }
 
-fn path_to_display(path: &PathBuf) -> &Path {
+fn path_to_display(path: &Path) -> &Path {
 	let Ok(cwd) = std::env::current_dir() else {
 		return path;
 	};
