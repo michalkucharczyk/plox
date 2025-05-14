@@ -1,5 +1,5 @@
 set terminal pngcairo enhanced font 'arial,10' fontscale 3.0 size 7560, 5500
-set output './tests/.output/regex.png'
+set output './tests/.output/basic.png'
 set linetype 1 lc rgb "red" dt 1 pt 7 lw 2.0 ps 4.0
 set linetype 2 lc rgb "blue" dt 1 pt 9 lw 2.0 ps 4.0
 set linetype 3 lc rgb "dark-green" dt 1 pt 5 lw 2.0 ps 4.0
@@ -37,12 +37,10 @@ set origin 0.0,0
 set size 1.0,0.995
 unset label
 unset logscale y
-set xrange ["2020-01-01T00:00:18":"2020-01-01T00:16:34"]
-csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__yam_module__y%3D%5C%28%5B%5Cd%5C.%5D%2B%2C%5Cs%2A%28%5B%5Cd%5C.%5D%2B%29%5C%29.csv'
-csv_data_file_0001 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__yam_module__y%3D%5C%28%28%5B%5Cd%5C.%5D%2B%29%2C%5Cs%2A%5B%5Cd%5C.%5D%2B%5C%29.csv'
+set xrange ["2025-05-12T16:46:40":"2025-05-12T16:46:54"]
+csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/checker.log_1747248164__%5Cbduration%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
 plot \
-   csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title '1st tuple item', \
-   csv_data_file_0001 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title '2nd tuple item'
+   csv_data_file_0000 using (combine_datetime('date','time')):'value' with points ps 2 axes x1y1 title 'value of duration'
 unset y2tics
 unset my2tics
 unset multiplot

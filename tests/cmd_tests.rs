@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader};
 macro_rules! bash(
 	( plox $($a:tt)* ) => {{
 		let bin_path = env!("CARGO_BIN_EXE_plox");
-		let status = spawn_with_output!($bin_path $($a)*)
+		let status = spawn_with_output!(PLOX_DO_NOT_DISPLAY=1 $bin_path $($a)*)
 			.expect("process running")
 			.wait_with_output();
 
@@ -20,7 +20,7 @@ macro_rules! bash(
 			// So let's re-run failed execution and print the output, so we know what failed.
 			tracing::error!("Execution failed, rerunning with output captured");
 			spawn_with_output!(
-				$bin_path -vv $($a)*
+				PLOX_DO_NOT_DISPLAY=1 $bin_path -vv $($a)*
 			)
 			.expect("process running")
 			.wait_with_pipe(&mut |pipe| {
@@ -89,11 +89,38 @@ fn cmd_simple() -> String {
 	)
 }
 
+#[docify::export_content]
+#[allow(dead_code)]
+fn cmd_simple_readme_no_outputs() -> String {
+	bash!(
+		plox graph
+		  --input tests/examples/checker.log
+		  --plot duration
+	)
+}
+
+#[docify::export_content]
+fn cmd_simple_readme() -> String {
+	bash!(
+		plox graph
+		  --input  tests/examples/checker.log
+		  --output tests/.output/basic.png
+		  --plot duration
+	)
+}
+
 #[test]
 fn test_cmd_simple() {
 	plox::logging::init_tracing_test();
 	cmd_simple();
 	compare_files("default.gnuplot");
+}
+
+#[test]
+fn test_cmd_simple_readme() {
+	plox::logging::init_tracing_test();
+	cmd_simple_readme();
+	compare_files("basic.gnuplot");
 }
 
 #[docify::export_content]
@@ -271,3 +298,92 @@ fn test_cmd_cat_works() {
 
 	assert_eq!(output, expected);
 }
+
+#[test]
+fn test_cmd_cat_works2() {
+	let output = bash!(
+		plox cat
+		  --input tests/examples/some.log
+		  --timestamp-format "[%s]"
+		  field-value yam_module r#"y=\([\d\.]+,\s*([\d\.]+)\)"#
+	);
+	let expected = r#"26.026026
+261.261261
+296.296296
+303.303303
+332.332332
+356.356356
+377.377377
+403.403403
+486.486486
+588.588589
+626.626627
+637.637638
+655.655656
+661.661662
+670.670671
+706.706707
+740.740741
+824.824825
+870.870871
+916.916917
+947.947948
+959.95996"#;
+	assert_eq!(output, expected);
+}
+
+#[docify::export_content]
+fn cmd_stat_readme() -> String {
+	bash!(
+		plox stat
+		  --input tests/examples/checker.log
+		  field-value TRACE duration
+	)
+}
+
+#[docify::export_content]
+fn cmd_stat2() -> String {
+	bash!(
+		plox stat
+		  --input tests/examples/some.log
+		  --timestamp-format "[%s]"
+		  field-value om_module x
+	)
+}
+
+#[test]
+fn test_cmd_stat_readme() {
+	let output = cmd_stat_readme();
+	let expected = r#" count: 1130
+   min: 0.13308
+   max: 3.114183
+  mean: 1.0390050628318581
+median: 1.0636225000000001
+   q75: 1.0734786666666667
+   q90: 1.2681463333333334
+   q95: 1.4730833499999998
+   q99: 2.06401263
+
+# Each ∎ is a count of 17
+#
+    0.1331 -     0.6312 [  66 ]: ∎∎∎
+    0.6312 -     1.1293 [ 856 ]: ∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+    1.1293 -     1.6274 [ 171 ]: ∎∎∎∎∎∎∎∎∎∎
+    1.6274 -     2.1255 [  34 ]: ∎∎
+    2.1255 -     2.6236 [   1 ]: 
+    2.6236 -     3.1217 [   2 ]: 
+    3.1217 -     3.6199 [   0 ]: 
+    3.6199 -     4.1180 [   0 ]: 
+    4.1180 -     4.6161 [   0 ]: 
+    4.6161 -     5.1142 [   0 ]: 
+"#;
+	assert_eq!(output, expected);
+}
+
+#[test]
+fn test_cmd_stat2() {
+	cmd_stat2();
+}
+
+//something to consider:
+//datamash mean 1 count 1 max 1 min 1 perc:99 1 perc:95 1 perc:90 1 perc:75 1

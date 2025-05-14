@@ -10,21 +10,41 @@ For some examples refer to [sample gallery](https://github.com/michalkucharczyk/
 
 ## ✨ Features
 
-- Regex-based field extraction with optional fast line filtering,
-- Flexible timestamp parsing and unit-aware number handling,
-- Compose multi-panel layouts to separate and group related metrics,
-- Multiple input logs with per-file layouts and panel duplication support,
-- Supports:
-  - Numeric value plotting,
-  - Fixed-value markers on event (pattern) match,
-  - Cumulative event counting,
-  - Time deltas between events,
-- Reusable graph layouts via TOML config files
-- Outputs PNGs (via gnuplot) and per-line CSV caches for fast redraws
+- Plot over time:
+  - Numeric fields (e.g. `"duration: 125ms"`)
+  - Event markers when patterns appear
+  - Event counts and time deltas between matches
+
+- Parsing logs:
+  - Extract numeric values from logs using regex
+  - Parse flexible timestamp formats
+  - Support unit-aware values
+  - Filter log lines using fast string-based guards
+
+- Compose multi-panel layouts to keep metrics organized
+- Compare multiple logs using per-file layouts and panel duplication
+
+- Save and reuse graph setups via TOML config files
+- Output PNG graphs (via gnuplot) and CSV caches for fast redraws
+
+- Includes tools to explore your data:
+  - `stat` → shows summary stats and histogram
+  - `cat` → prints raw extracted values
 
 
-## 🧪 Example
+## 🧪 Examples
 
+The simplest usage, typical first call:
+```rust,ignore
+plox graph \
+	  --input tests/examples/checker.log \
+	  --plot duration
+
+```
+
+<img src="https://raw.githubusercontent.com/michalkucharczyk/plox/master/tests/examples/basic.png" width="800" />
+
+More complex usage:
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
@@ -45,6 +65,8 @@ plox graph \
 
 For more examples refer to [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
 
+See `plox --help` for a complete list of subcommands and options.
+
 ---
 
 ## 📦 Install
@@ -64,7 +86,200 @@ cargo build --release
 
 ---
 
-## 📊 Case Study
+
+## 🔧 Advanced topics
+
+In this section:
+- [Stats and Raw Values](#-displaying-stats-and-raw-values)
+- [Multiple Log Files](#-working-with-multiple-log-files)
+- [Panel Duplication](#-panel-duplication)
+- [Time Ranges](#-time-ranges-and-alignment)
+- [Graph Config](#-graph-config)
+- [Output Files](#-output-files)
+- [Case Study](#-case-study)
+
+## 📊 Displaying Stats and Raw Values
+
+Working with extracted datasets often benefits from quick statistical insight, and `plox` provides built-in tools for that.
+
+```rust,ignore
+plox stat \
+	  --input tests/examples/checker.log \
+	  field-value TRACE duration
+
+```
+
+This command displays basic statistics (count, min, max, mean, median, percentiles) and shows an ASCII histogram to help you quickly understand the distribution of extracted values:
+```ignore
+ count: 1130
+   min: 0.13308
+   max: 3.114183
+  mean: 1.0390050628318581
+median: 1.0636225000000001
+   q75: 1.0734786666666667
+   q90: 1.2681463333333334
+   q95: 1.4730833499999998
+   q99: 2.06401263
+
+# Each ∎ is a count of 17
+#
+    0.1331 -     0.6312 [  66 ]: ∎∎∎
+    0.6312 -     1.1293 [ 856 ]: ∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+    1.1293 -     1.6274 [ 171 ]: ∎∎∎∎∎∎∎∎∎∎
+    1.6274 -     2.1255 [  34 ]: ∎∎
+    2.1255 -     2.6236 [   1 ]:
+    2.6236 -     3.1217 [   2 ]:
+    3.1217 -     3.6199 [   0 ]:
+    3.6199 -     4.1180 [   0 ]:
+    4.1180 -     4.6161 [   0 ]:
+    4.6161 -     5.1142 [   0 ]:
+```
+
+---
+### 📂 Working with Multiple Log Files
+
+Multiple input logs can be passed via `--input`:
+
+```sh
+plox graph --input a.log,b.log ...
+```
+
+By default, each line (plot, event, etc.) is applied to **all input files** — unless it is bound to a specific file.
+
+#### 🔗 Binding a Line to a Specific File
+
+To target a specific log file:
+
+- Use `--file-id <N>` to refer to the *Nth* file in `--input`
+- Or use `--file-name <path>` to bind directly to a filename
+
+```sh
+# apply this line only to c.log:
+--input a.log,b.log,c.log --plot my-guard duration --file-id 2 
+
+# apply this line to global-errors.log which is not used in --input:
+--input a.log,b.log --plot my-guard "duration: ([0-9.]+)" --file-name globab-errors.log
+```
+
+#### ✅ Without Binding, Lines Apply to All Inputs
+
+If `--file-id` or `--file-name` is not set, the line is applied to **every file** in `--input`.
+
+This is useful if comparing logs from the same system.
+
+---
+
+### 🔄 Panel Duplication
+
+Use `--per-file-panels` to **separate outputs per input log**, which may improve readability of the graph.
+
+This flag automatically duplicates each panel once per input file, **if that panel includes any unbound lines**. Then, it resolves each unbound line to exactly one input.
+
+#### How it works
+
+- Unbound lines (no `file-id` or `file-name`) → assigned to exactly one file per duplicated panel
+- Bound lines → copied into all panels unchanged
+- Each final panel = one log file + one consistent layout
+
+#### Why it matters
+
+This makes it easy to apply **a single graph layout across multiple logs**, with clean isolation:
+
+```sh
+plox graph --input a.log,b.log --per-file-panels \
+  --plot worker "duration: ([0-9.]+)" \
+  --file-name e.log --event-count "ERROR"
+```
+
+Results in:
+
+| Panel  | Line                          | File        |
+|--------|-------------------------------|-------------|
+| 0      | `duration`                    | a.log       |
+| 0      | `ERROR` (explicit file-name)  | e.log       |
+| 1      | `duration`                    | b.log       |
+| 1      | `ERROR` (explicit file-name)  | e.log       |
+
+This lets applying the same layout to multiple inputs while keeping shared reference lines intact.
+
+---
+
+### 🕒 Time Ranges and Alignment
+
+Each panel computes its own time range by merging the time spans of all its lines. This behavior is controlled by `--time-range-mode`, which determines whether the panel uses the full union or only the overlapping portion of its lines.
+
+The X-axis range across panels can then be left independent or aligned globally. This is configured using `--panel-alignment-mode`.
+
+If `--time-range` is provided, it overrides all automatic range calculation and applies a fixed global time window to all panels. Useful for "zooming" some interesting area.
+
+---
+
+### 📝 Graph Config
+
+Once the command-line version becomes too complex to maintain comfortably, the configuration can be saved to a TOML file using `-w <graph-config-file>`. This creates a declarative layout that’s easy to version, inspect, and edit.
+
+Below is a sample graph configuration representing where we eventually land in the case study. It’s functionally identical to the CLI commands above but significantly easier to maintain as the graph grows.
+
+```toml
+[[panels]]
+
+[[panels.lines]]
+guard = "prune:"
+field = "validated_counter"
+style = "points"
+marker_size = 3.0
+marker_type = "dot"
+marker_color = "red"
+title = "validation count in prune"
+
+[[panels.lines]]
+guard = "prune"
+field = 'took:([\d\.]+)(\w+)?'
+style = "points"
+marker_size = 3.0
+marker_type = "cross"
+marker_color = "blue"
+title = "prune duration [y2][ms]"
+yaxis = "y2"
+
+
+[[panels]]
+panel_title = "txs"
+legend = true
+
+[[panels.lines]]
+guard = "maintain"
+field = 'txs=\((\d+),\s+\d+\)'
+style = "steps"
+line_color = "red"
+title="watched txs"
+
+[[panels.lines]]
+guard = "maintain"
+field = 'txs=\(\d+,\s+(\d+)\)'
+style = "steps"
+line_color = "blue"
+line_width=2
+title="unwatched txs"
+```
+
+---
+
+### 📄 Output Files
+
+Running `plox graph` generates:
+
+- `png` — rendered plot in given location (default: `graph.png`, or via `--output`)
+- `gnuplot` — generated script (same location and name as PNG)
+- CSV cache per log file (default: `.plox/` next to the log file), can be controlled by `--cache-dir`,
+
+Regenration of CSV cache can be forced with `--force-csv-regen` flag.
+
+Additionally the output PNG can be saved next to the input log file (if one log), or to in a common parent directory (if multiple input files are given) if `--inline-output <FILE>` is used.
+
+---
+
+### 📊 Case Study
 
 This section walks through a real-world example of using `plox` to build a graph configuration progressively via the CLI — starting with a single metric, layering in more complexity, and finally extracting it into a reusable config.
 
@@ -139,155 +354,6 @@ plox graph --input eve-new.log -c prune.toml -o graph-new.png
 plox graph --input charlie.log,ferdie.log,dave.log,eve.log \
   -c prune.toml --per-file-panels -o graph-all.png
 ```
-
-
-### 📝 Graph Config
-
-Once the command-line version becomes too complex to maintain comfortably, the configuration can be saved to a TOML file using `-w <graph-config-file>`. This creates a declarative layout that’s easy to version, inspect, and edit.
-
-Below is a sample graph configuration representing where we eventually land in the case study. It’s functionally identical to the CLI commands above but significantly easier to maintain as the graph grows.
-
-```toml
-[[panels]]
-
-[[panels.lines]]
-guard = "prune:"
-field = "validated_counter"
-style = "points"
-marker_size = 3.0
-marker_type = "dot"
-marker_color = "red"
-title = "validation count in prune"
-
-[[panels.lines]]
-guard = "prune"
-field = 'took:([\d\.]+)(\w+)?'
-style = "points"
-marker_size = 3.0
-marker_type = "cross"
-marker_color = "blue"
-title = "prune duration [y2][ms]"
-yaxis = "y2"
-
-
-[[panels]]
-panel_title = "txs"
-legend = true
-
-[[panels.lines]]
-guard = "maintain"
-field = 'txs=\((\d+),\s+\d+\)'
-style = "steps"
-line_color = "red"
-title="watched txs"
-
-[[panels.lines]]
-guard = "maintain"
-field = 'txs=\(\d+,\s+(\d+)\)'
-style = "steps"
-line_color = "blue"
-line_width=2
-title="unwatched txs"
-```
-
----
-
-
-## 📂 Working with Multiple Log Files
-
-Multiple input logs can be passed via `--input`:
-
-```sh
-plox graph --input a.log,b.log ...
-```
-
-By default, each line (plot, event, etc.) is applied to **all input files** — unless it is bound to a specific file.
-
-### 🔗 Binding a Line to a Specific File
-
-To target a specific log file:
-
-- Use `--file-id <N>` to refer to the *Nth* file in `--input`
-- Or use `--file-name <path>` to bind directly to a filename
-
-```sh
-# apply this line only to c.log:
---input a.log,b.log,c.log --plot my-guard duration --file-id 2 
-
-# apply this line to global-errors.log which is not used in --input:
---input a.log,b.log --plot my-guard "duration: ([0-9.]+)" --file-name globab-errors.log
-```
-
-### ✅ Without Binding, Lines Apply to All Inputs
-
-If `--file-id` or `--file-name` is not set, the line is applied to **every file** in `--input`.
-
-This is useful if comparing logs from the same system.
-
----
-
-## 🔄 Panel Duplication
-
-Use `--per-file-panels` to **separate outputs per input log**, which may improve readability of the graph.
-
-This flag automatically duplicates each panel once per input file, **if that panel includes any unbound lines**. Then, it resolves each unbound line to exactly one input.
-
-### How it works
-
-- Unbound lines (no `file-id` or `file-name`) → assigned to exactly one file per duplicated panel
-- Bound lines → copied into all panels unchanged
-- Each final panel = one log file + one consistent layout
-
-### Why it matters
-
-This makes it easy to apply **a single graph layout across multiple logs**, with clean isolation:
-
-```sh
-plox graph --input a.log,b.log --per-file-panels \
-  --plot worker "duration: ([0-9.]+)" \
-  --file-name e.log --event-count "ERROR"
-```
-
-Results in:
-
-| Panel  | Line                          | File        |
-|--------|-------------------------------|-------------|
-| 0      | `duration`                    | a.log       |
-| 0      | `ERROR` (explicit file-name)  | e.log       |
-| 1      | `duration`                    | b.log       |
-| 1      | `ERROR` (explicit file-name)  | e.log       |
-
-This lets applying the same layout to multiple inputs while keeping shared reference lines intact.
-
----
-
-## 🕒 Time Ranges and Alignment
-
-Each panel computes its own time range by merging the time spans of all its lines. This behavior is controlled by `--time-range-mode`, which determines whether the panel uses the full union or only the overlapping portion of its lines.
-
-The X-axis range across panels can then be left independent or aligned globally. This is configured using `--panel-alignment-mode`.
-
-If `--time-range` is provided, it overrides all automatic range calculation and applies a fixed global time window to all panels. Useful for "zooming" some interesting area.
-
----
-
-## 🔧 Full CLI Reference
-
-See `plox --help` for a complete list of options.
-
----
-
-## 📄 Output Files
-
-Running `plox graph` generates:
-
-- `png` — rendered plot in given location (default: `graph.png`, or via `--output`)
-- `gnuplot` — generated script (same location and name as PNG)
-- CSV cache per log file (default: `.plox/` next to the log file), can be controlled by `--cache-dir`,
-
-Regenration of CSV cache can be forced with `--force-csv-regen` flag.
-
-Additionally the output PNG can be saved next to the input log file (if one log), or to in a common parent directory (if multiple input files are given) if `--inline-output <FILE>` is used.
 
 ---
 
