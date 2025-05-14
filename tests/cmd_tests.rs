@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader};
 macro_rules! bash(
 	( plox $($a:tt)* ) => {{
 		let bin_path = env!("CARGO_BIN_EXE_plox");
-		let status = spawn_with_output!($bin_path $($a)*)
+		let status = spawn_with_output!(PLOX_DO_NOT_DISPLAY=1 $bin_path $($a)*)
 			.expect("process running")
 			.wait_with_output();
 
@@ -20,7 +20,7 @@ macro_rules! bash(
 			// So let's re-run failed execution and print the output, so we know what failed.
 			tracing::error!("Execution failed, rerunning with output captured");
 			spawn_with_output!(
-				$bin_path -vv $($a)*
+				PLOX_DO_NOT_DISPLAY=1 $bin_path -vv $($a)*
 			)
 			.expect("process running")
 			.wait_with_pipe(&mut |pipe| {

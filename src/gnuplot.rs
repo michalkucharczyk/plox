@@ -15,7 +15,7 @@ use std::{
 	path::{Path, PathBuf},
 	process::{Command, ExitStatus},
 };
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 const LOG_TARGET: &str = "gnuplot";
 
@@ -359,6 +359,33 @@ pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> 
 	if !output.stderr.is_empty() {
 		debug!(target:APPV,"--- gnuplot stderr ---");
 		debug!(target:APPV,"\n{}", String::from_utf8_lossy(&output.stderr));
+	}
+
+	let do_not_open =
+		context.output_graph_ctx.do_not_display || std::env::var("PLOX_DO_NOT_DISPLAY").is_ok();
+
+	if !do_not_open {
+		let cmd = if let Ok(viewer_cmd_path) = std::env::var("PLOX_IMAGE_VIEWER") {
+			Some(Command::new(viewer_cmd_path))
+		} else {
+			#[cfg(target_os = "linux")]
+			{
+				Some(Command::new("xdg-open"))
+			}
+			#[cfg(not(target_os = "linux"))]
+			{
+				None
+			}
+		};
+
+		if let Some(mut cmd) = cmd {
+			cmd.arg(image_path);
+			if let Err(e) = cmd.status() {
+				warn!(target:APPV,"Displaying image with command: '{cmd:?}' failed {e}.");
+			}
+		};
+	} else {
+		debug!(target:APPV,"Displaying image disabled.");
 	}
 	Ok(())
 }

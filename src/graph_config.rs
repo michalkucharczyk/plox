@@ -238,6 +238,14 @@ pub struct OutputGraphContext {
 	#[arg(long, short = 'a', default_value_t = false, help_heading = "Output files")]
 	#[serde(skip)]
 	pub display_absolute_paths: bool,
+
+	/// Do not display the graph in the image viewer.
+	///
+	/// If provided, the image viewer (default system or configured by PLOX_IMAGE_VIEWER environment variable) will not
+	/// be opened to display the generated graph image.
+	#[arg(long, short = 'x', default_value_t = false, help_heading = "Output files")]
+	#[serde(skip)]
+	pub do_not_display: bool,
 }
 
 impl InputFilesContext {
