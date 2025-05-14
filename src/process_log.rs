@@ -86,6 +86,7 @@ struct LineProcessor {
 	pub timestamp_format: TimestampFormat,
 	timestamp_extraction_failure_count: usize,
 	input_file_name: PathBuf,
+	ignore_invalid_timestamps: bool,
 }
 
 impl LineProcessor {
@@ -94,6 +95,7 @@ impl LineProcessor {
 		output_path: Option<PathBuf>,
 		timestamp_format: TimestampFormat,
 		input_file_name: PathBuf,
+		ignore_invalid_timestamps: bool,
 	) -> Result<Self, Error> {
 		let regex = data_source.compile_regex()?;
 		Ok(Self {
@@ -105,6 +107,7 @@ impl LineProcessor {
 			records: Vec::new(),
 			timestamp_extraction_failure_count: 0,
 			input_file_name,
+			ignore_invalid_timestamps,
 		})
 	}
 
@@ -125,7 +128,7 @@ impl LineProcessor {
 	fn handle_timestamp_extraction_failure(&mut self, line: &str) -> Result<(), Error> {
 		self.timestamp_extraction_failure_count += 1;
 
-		if self.timestamp_extraction_failure_count > 3 {
+		if !self.ignore_invalid_timestamps && self.timestamp_extraction_failure_count > 3 {
 			warn!(target:APPV, log_line = line,
 				timestamp_format=?self.timestamp_format,
 				"Timestamp extraction failed for {} lines. Exiting.", self.timestamp_extraction_failure_count);
@@ -564,6 +567,7 @@ pub fn process_inputs(
 				Some(csv_output_path),
 				input_context.timestamp_format().clone(),
 				canonical_line.source_file_name().clone(),
+				input_context.ignore_invalid_timestamps(),
 			)?;
 
 			processors
@@ -645,6 +649,7 @@ pub fn regex_match_preview_inner(
 		None,
 		context.timestamp_format().clone(),
 		context.input.clone(),
+		false,
 	)?;
 
 	let input_file =
@@ -1409,6 +1414,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1436,6 +1442,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1471,6 +1478,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"%b %d %I:%M:%S %p".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1505,6 +1513,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"[%s]".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1540,6 +1549,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"[%s.3f]".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1574,6 +1584,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"%j %I:%M:%S %p".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1608,6 +1619,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1642,6 +1654,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"%I:%M:%S %p".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1681,6 +1694,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1733,6 +1747,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			DEFAULT_TIMESTAMP_FORMAT,
 			"input.log".into(),
+			false,
 		)
 		.unwrap();
 
@@ -1779,6 +1794,7 @@ mod tests {
 			Some(PathBuf::from("output.csv")),
 			"%Y %j %I:%M:%S %p".into(),
 			"input.log".into(),
+			false,
 		)
 		.unwrap_err();
 

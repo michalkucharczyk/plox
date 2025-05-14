@@ -31,6 +31,10 @@ pub enum Error {
 	CvsDateParseError(#[from] chrono::ParseError),
 	#[error("Empty ranges for all lines. No data or bad timestamp or bad guard/regex?")]
 	EmptyRangeError,
+	#[error(
+		"Incorrect time range for all lines: {0} {1} (try re-running with '--force-csv-regen')"
+	)]
+	IncorrectRangeError(NaiveDateTime, NaiveDateTime),
 }
 
 fn csv_range_from_file(path: &PathBuf) -> Result<Option<(NaiveDateTime, NaiveDateTime)>, Error> {
@@ -157,7 +161,7 @@ fn resolve_panels_ranges_inner(
 						panel.set_time_range(start, end);
 					}
 				} else {
-					panic!("should not happen. (this is bug?)");
+					return Err(Error::IncorrectRangeError(start, end));
 				}
 			}
 		},

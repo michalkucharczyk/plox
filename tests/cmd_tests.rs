@@ -89,11 +89,38 @@ fn cmd_simple() -> String {
 	)
 }
 
+#[docify::export_content]
+#[allow(dead_code)]
+fn cmd_simple_readme_no_outputs() -> String {
+	bash!(
+		plox graph
+		  --input tests/examples/checker.log
+		  --plot duration
+	)
+}
+
+#[docify::export_content]
+fn cmd_simple_readme() -> String {
+	bash!(
+		plox graph
+		  --input  tests/examples/checker.log
+		  --output tests/.output/basic.png
+		  --plot duration
+	)
+}
+
 #[test]
 fn test_cmd_simple() {
 	plox::logging::init_tracing_test();
 	cmd_simple();
 	compare_files("default.gnuplot");
+}
+
+#[test]
+fn test_cmd_simple_readme() {
+	plox::logging::init_tracing_test();
+	cmd_simple_readme();
+	compare_files("basic.gnuplot");
 }
 
 #[docify::export_content]
@@ -306,11 +333,11 @@ fn test_cmd_cat_works2() {
 }
 
 #[docify::export_content]
-fn cmd_stat1() -> String {
+fn cmd_stat_readme() -> String {
 	bash!(
 		plox stat
-		  --input  tests/examples/default.log
-		  field-value om_module x
+		  --input tests/examples/checker.log
+		  field-value duration
 	)
 }
 
@@ -325,8 +352,32 @@ fn cmd_stat2() -> String {
 }
 
 #[test]
-fn test_cmd_stat1() {
-	cmd_stat1();
+fn test_cmd_stat_readme() {
+	let output = cmd_stat_readme();
+	let expected = r#" count: 1130
+   min: 0.13308
+   max: 3.114183
+  mean: 1.0390050628318581
+median: 1.0636225000000001
+   q75: 1.0734786666666667
+   q90: 1.2681463333333334
+   q95: 1.4730833499999998
+   q99: 2.06401263
+
+# Each ∎ is a count of 17
+#
+    0.1331 -     0.6312 [  66 ]: ∎∎∎
+    0.6312 -     1.1293 [ 856 ]: ∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+    1.1293 -     1.6274 [ 171 ]: ∎∎∎∎∎∎∎∎∎∎
+    1.6274 -     2.1255 [  34 ]: ∎∎
+    2.1255 -     2.6236 [   1 ]: 
+    2.6236 -     3.1217 [   2 ]: 
+    3.1217 -     3.6199 [   0 ]: 
+    3.6199 -     4.1180 [   0 ]: 
+    4.1180 -     4.6161 [   0 ]: 
+    4.6161 -     5.1142 [   0 ]: 
+"#;
+	assert_eq!(output, expected);
 }
 
 #[test]

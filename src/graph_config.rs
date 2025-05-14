@@ -122,14 +122,16 @@ pub struct InputFilesContext {
 	timestamp_format: Option<TimestampFormat>,
 
 	/// Forces regeneration of the CSV cache by re-parsing the log files.
-	#[arg(
-		long = "force-csv-regen",
-		short = 'f',
-		default_value_t = false,
-		help_heading = "Output files"
-	)]
+	#[arg(long, short = 'f', default_value_t = false, help_heading = "Output files")]
 	#[serde(skip)]
 	force_csv_regen: bool,
+
+	/// Do not fail if log contains lines with invalid timestamp.
+	///
+	/// Ignores invalid timestamps. Useful when log contains line with invalid or no timestamp (e.g. stacktraces).
+	#[arg(long, short = 't', default_value_t = false, help_heading = "Input files")]
+	#[serde(skip)]
+	ignore_invalid_timestamps: bool,
 }
 
 /// Global graph context shared across all panels and lines.
@@ -229,6 +231,13 @@ pub struct OutputGraphContext {
 	)]
 	#[serde(skip)]
 	time_range: Option<TimeRangeArg>,
+
+	/// Indicates if absolute paths to output files shall be displayed.
+	///
+	/// Otherwise relative path will be displayed.
+	#[arg(long, short = 'a', default_value_t = false, help_heading = "Output files")]
+	#[serde(skip)]
+	pub display_absolute_paths: bool,
 }
 
 impl InputFilesContext {
@@ -251,6 +260,10 @@ impl InputFilesContext {
 	pub fn force_csv_regen(&self) -> bool {
 		self.force_csv_regen
 	}
+
+	pub fn ignore_invalid_timestamps(&self) -> bool {
+		self.ignore_invalid_timestamps
+	}
 }
 
 impl GraphFullContext {
@@ -265,6 +278,7 @@ impl GraphFullContext {
 		}
 
 		set_if_none!(output_graph_ctx.per_file_panels);
+		set_if_none!(output_graph_ctx.inline_output);
 		set_if_none!(input_files_ctx.timestamp_format);
 	}
 

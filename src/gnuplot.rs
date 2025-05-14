@@ -210,7 +210,7 @@ pub fn write_gnuplot_script(
 				let font = if i == 0 { "arial bold,10" } else { "arial,8" };
 				gpwr!(
 					file,
-					"set label '{title_line}' at graph {x},0.5 rotate by 90 center font\"{font}\"",
+					"set label '{title_line}' at graph {x},0.5 rotate by 90 center font\"{font}\" noenhanced",
 				)?;
 				x += 0.005;
 			}
@@ -304,16 +304,23 @@ pub fn write_gnuplot_script(
 	Ok(())
 }
 
+fn path_to_display(path: &PathBuf) -> &Path {
+	let Ok(cwd) = std::env::current_dir() else {
+		return path;
+	};
+	path.strip_prefix(&cwd).unwrap_or(path)
+}
+
 /// Write gnuplot script and immediately execute it with `gnuplot`.
-///
-/// # Arguments
-/// * `config` - Graph configuration to render.
-/// * `script_path` - Where to save the gnuplot .gnu script.
-/// * `image_path` - Output image path.
 pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> Result<(), Error> {
 	let (image_path, script_path) = context.get_graph_output_path();
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;
+	let script_path = if context.output_graph_ctx.display_absolute_paths {
+		script_path
+	} else {
+		path_to_display(&script_path).to_path_buf()
+	};
 	info!(target:APPV,"Script saved: {}", script_path.display());
 
 	if std::env::var("PLOX_SKIP_GNUPLOT").is_ok() {
@@ -337,6 +344,11 @@ pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> 
 		));
 	}
 
+	let image_path = if context.output_graph_ctx.display_absolute_paths {
+		image_path
+	} else {
+		path_to_display(&image_path).to_path_buf()
+	};
 	info!(target:APPV,"Image  saved: {}", image_path.display());
 
 	if !output.stdout.is_empty() {

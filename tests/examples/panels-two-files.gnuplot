@@ -36,7 +36,7 @@ combine_datetime(date_col,time_col) = strcol(date_col) . 'T' . strcol(time_col)
 set origin 0.0,0
 set size 1.0,0.16166666666666665
 unset label
-set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set y2tics nomirror
 set my2tics 10
@@ -51,7 +51,7 @@ unset my2tics
 set origin 0.0,0.16166666666666665
 set size 1.0,0.16166666666666665
 unset label
-set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set y2tics nomirror
 set my2tics 10
@@ -66,7 +66,7 @@ unset my2tics
 set origin 0.0,0.3233333333333333
 set size 1.0,0.16166666666666665
 unset label
-set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
@@ -81,7 +81,7 @@ unset my2tics
 set origin 0.0,0.485
 set size 1.0,0.16166666666666665
 unset label
-set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__x_module__%5Cbx01%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
@@ -96,7 +96,7 @@ unset my2tics
 set origin 0.0,0.6466666666666666
 set size 1.0,0.16166666666666665
 unset label
-set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default-other]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default-other.log_1745784327__om_module__%5Cbx%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
@@ -107,7 +107,7 @@ unset my2tics
 set origin 0.0,0.8083333333333332
 set size 1.0,0.16166666666666665
 unset label
-set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10"
+set label '[default]' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set xrange ["2020-01-01T00:00:00":"2020-01-01T00:16:34"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/default.log_1745784327__om_module__%5Cbx%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'
