@@ -337,7 +337,7 @@ fn cmd_stat_readme() -> String {
 	bash!(
 		plox stat
 		  --input tests/examples/checker.log
-		  field-value duration
+		  field-value TRACE duration
 	)
 }
 
