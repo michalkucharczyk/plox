@@ -2,7 +2,7 @@
 //! These tests run real commands with sample inputs and check that the outputs are correct.
 //! Also serves as live examples which are directly inluded into SAMPLE.md file.
 
-use cmd_lib::spawn_with_output;
+use cmd_lib::{run_cmd, spawn_with_output};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -383,6 +383,26 @@ median: 1.0636225000000001
 #[test]
 fn test_cmd_stat2() {
 	cmd_stat2();
+}
+
+#[test]
+fn cmd_help() {
+	run_cmd! (
+		echo "### `plox` CLI reference:\n```ignore" > cli-help.md
+	)
+	.unwrap();
+	bash!(plox - -help >> CLI - HELP.md);
+	run_cmd! (
+		echo "```\n---\n### `plox graph` reference:\n```ignore" >> cli-help.md
+	)
+	.unwrap();
+	bash!(
+		plox graph --help >> cli-help.md
+	);
+	run_cmd! (
+		echo "```" >> cli-help.md
+	)
+	.unwrap();
 }
 
 //something to consider:

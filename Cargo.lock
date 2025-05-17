@@ -1005,7 +1005,7 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plox"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "annotate-snippets",
  "chrono",
