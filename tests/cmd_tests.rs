@@ -391,7 +391,10 @@ fn cmd_help() {
 		echo "### `plox` CLI reference:\n```ignore" > cli-help.md
 	)
 	.unwrap();
-	bash!(plox - -help >> CLI - HELP.md);
+	#[rustfmt::skip]
+	bash!(
+		plox --help >> cli-help.md
+	);
 	run_cmd! (
 		echo "```\n---\n### `plox graph` reference:\n```ignore" >> cli-help.md
 	)
