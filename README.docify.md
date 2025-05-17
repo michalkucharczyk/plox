@@ -6,7 +6,8 @@ You give it logs. It gives you a graph.
 
 Turn timestamped logs into clean plots.  Extract numeric values from log files and plot them over time. Fully CLI-driven. Regex-based. Configurable.
 
-For some examples refer to [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
+For 📸 real-world usage examples, see the [sample gallery](https://github.com/michalkucharczyk/plox/blob/master/SAMPLE.md).
+Browse full [CLI reference](https://github.com/michalkucharczyk/plox/blob/master/cli-help.md).
 
 ## ✨ Features
 
