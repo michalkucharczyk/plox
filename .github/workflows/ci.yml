@@ -18,8 +18,7 @@ jobs:
     - uses: dtolnay/rust-toolchain@1.86.0
       with:
         components: clippy, rustfmt 
-    - name: Cache
-      uses: actions/cache@v4
+    - uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -28,9 +27,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}    
     - run: cargo fmt --all -- --check
     - run: cargo clippy --all-targets --all-features -- -D warnings      
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
+    - run: cargo build --verbose
+    - run: cargo test --verbose
       env:
         PLOX_SKIP_GNUPLOT: '1'      
-      run: cargo test --verbose
