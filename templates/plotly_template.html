@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plox Graph</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    html, body {
+        height: auto;
+          overflow-y: scroll;
+      }	  
+    .plot-panel { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  {% for panel in panels %}
+    <div id="{{ panel.id }}" class="plot-panel"></div>
+  {% endfor %}
+
+  <script>
+    function makeLayout(title) {
+      return {
+        title: { text: title, font: { size: 14 } },
+        margin: { l: 50, r: 30, t: 30, b: 30 },
+        height: 600,
+        showlegend: true,
+	legend: { orientation: "h", x: 0, y: -0.3 }
+      };
+    }
+    {% for panel in panels %}
+    Plotly.newPlot("{{ panel.id }}", {{ panel.traces_json }}, makeLayout("{{ panel.title }}"));
+    {% endfor %}
+
+	const plots = {{ panels | map(attribute="id") | list | tojson }};
+    const isSyncing = {};
+    plots.forEach(id => isSyncing[id] = false);
+
+    plots.forEach(sourceId => {
+      const sourceEl = document.getElementById(sourceId);
+      const others = plots.filter(id => id !== sourceId);
+
+      sourceEl.on('plotly_relayout', e => {
+        if (isSyncing[sourceId]) return;
+
+        if (e['xaxis.range[0]'] && e['xaxis.range[1]']) {
+          const range = [e['xaxis.range[0]'], e['xaxis.range[1]']];
+          others.forEach(targetId => {
+            isSyncing[targetId] = true;
+            Plotly.relayout(targetId, { 'xaxis.range': range }).then(() => {
+              isSyncing[targetId] = false;
+            });
+          });
+        }
+
+        if (e['xaxis.autorange']) {
+          others.forEach(targetId => {
+            isSyncing[targetId] = true;
+            Plotly.relayout(targetId, { 'xaxis.autorange': true }).then(() => {
+              isSyncing[targetId] = false;
+            });
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+

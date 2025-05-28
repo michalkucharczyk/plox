@@ -1,15 +1,25 @@
 use crate::{
-	graph_config::GraphFullContext,
+	graph_config::{GraphFullContext, OutputFilePaths},
+	logging::APPV,
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
 };
 use csv::ReaderBuilder;
-use plotly::common::{Mode, Title};
-use plotly::{Layout, Plot, Scatter};
+use plotly::Scatter;
+use serde::Serialize;
 use std::path::Path;
 use std::{fs::File, io};
 use std::{io::BufReader, num::ParseFloatError};
+use tracing::{debug, info};
 
-const LOG_TARGET: &str = "gnuplot";
+//todo:
+// - logging
+// - read_cvs unification with process_log::stat/cat
+// - title - multi line better support
+// - style
+// - log - scale?
+// - y2 axis?
+
+const LOG_TARGET: &str = "plotly";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -23,21 +33,38 @@ pub enum Error {
 	CvsFilesResolutionError(Box<ResolvedLine>),
 	#[error("Parse float error: {0}")]
 	ParseFloatError(#[from] ParseFloatError),
+	#[error("JSON serialization error: {0}")]
+	SerdeJsonError(#[from] serde_json::Error),
+	#[error("Incorrect input files (this is bug).")]
+	IncorrectOutputFiles,
+}
+
+#[derive(Serialize)]
+struct PanelTemplateInput {
+	id: String,
+	title: String,
+	traces_json: String,
 }
 
 pub fn write_plotly_html(
 	config: &ResolvedGraphConfig,
 	context: &GraphFullContext,
-	output_html_path: &Path,
 ) -> Result<(), Error> {
-	let mut plot = Plot::new();
+	let OutputFilePaths::Plotly(html_path) = context.get_graph_output_path() else {
+		return Err(Error::IncorrectOutputFiles);
+	};
+
+	let mut panels = vec![];
 
 	for (panel_idx, panel) in config.panels.iter().enumerate() {
 		if panel.is_empty() {
 			continue;
 		}
+		let id = format!("plot{}", panel_idx);
+		debug!(target:LOG_TARGET,"drawing {id}: {:#?}",panel);
+		let mut traces = vec![];
 
-		for (_line_idx, line) in panel.lines.iter().enumerate() {
+		for line in &panel.lines {
 			let csv_path = line
 				.shared_csv_filename()
 				.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
@@ -45,22 +72,27 @@ pub fn write_plotly_html(
 			let (timestamps, values) = read_csv(&csv_path, line.csv_data_column_for_plot())?;
 
 			let trace = Scatter::new(timestamps, values)
-				.mode(Mode::Lines)
+				.mode(plotly::common::Mode::Markers)
 				.name(line.title(context.input().len() > 1));
 
-			plot.add_trace(trace);
+			traces.push(trace);
 		}
 
-		let panel_title = if panel.title().is_empty() {
-			format!("Panel {}", panel_idx + 1)
-		} else {
-			panel.title().join("\n")
-		};
-		let layout = Layout::new().title(Title::with_text(&panel_title));
-		plot.set_layout(layout);
+		let traces_json = serde_json::to_string(&traces)?;
+		panels.push(PanelTemplateInput {
+			id,
+			traces_json,
+			title: panel.title().join(" | ").to_string(),
+		});
 	}
 
-	plot.write_html(output_html_path);
+	let raw_template = include_str!("../templates/plotly_template.html"); // relative to this Rust file
+	let rendered = minijinja::render!(raw_template,
+			panels => panels
+	);
+
+	std::fs::write(&html_path, rendered)?;
+	info!(target:APPV,"HTML saved: {}", html_path.display());
 	Ok(())
 }
 

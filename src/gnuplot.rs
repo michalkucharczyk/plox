@@ -5,7 +5,10 @@
 //! of gnuplot and the saving of resulting graph images.
 
 use crate::{
-	graph_config::{AxisScale, Color, DashStyle, GraphFullContext, MarkerType, PlotStyle, YAxis},
+	graph_config::{
+		AxisScale, Color, DashStyle, GraphFullContext, MarkerType, OutputFilePaths, PlotStyle,
+		YAxis,
+	},
 	logging::APPV,
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
 };
@@ -33,6 +36,8 @@ pub enum Error {
 	GnuplotNonZeroExitCode(ExitStatus, String, String),
 	#[error("Error while creating gnuplot script '{0}': {1}")]
 	ScriptCreationError(PathBuf, io::Error),
+	#[error("Incorrect input files (this is bug).")]
+	IncorrectOutputFiles,
 }
 
 impl MarkerType {
@@ -313,7 +318,10 @@ fn path_to_display(path: &Path) -> &Path {
 
 /// Write gnuplot script and immediately execute it with `gnuplot`.
 pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> Result<(), Error> {
-	let (image_path, script_path) = context.get_graph_output_path();
+	let OutputFilePaths::Gnuplot((image_path, script_path)) = context.get_graph_output_path()
+	else {
+		return Err(Error::IncorrectOutputFiles);
+	};
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;
 	let script_path = if context.output_graph_ctx.display_absolute_paths {

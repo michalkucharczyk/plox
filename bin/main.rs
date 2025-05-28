@@ -31,6 +31,9 @@ fn main() -> ExitCode {
 			error!(
 				"For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>"
 			);
+			error!(
+				"You can also use '-t' or  `--ignore-invalid-timestamps` to ignore lines with invalid or no timestamp."
+			);
 			ExitCode::FAILURE
 		},
 		Err(e) => {
@@ -77,12 +80,11 @@ fn inner_main() -> Result<(), Error> {
 		debug!(target:APPV,"Ranges resolved in: {:?}", now.elapsed());
 
 		let now = Instant::now();
-		gnuplot::run_gnuplot(&resolved_config, &shared_context)?;
-		// plox::plotly_backend::write_plotly_html(
-		// 	&resolved_config,
-		// 	&shared_context,
-		// 	Path::new("/tmp/xxx.html"),
-		// )?;
+		if !shared_context.output_graph_ctx.plotly_backend {
+			gnuplot::run_gnuplot(&resolved_config, &shared_context)?;
+		} else {
+			plox::plotly_backend::write_plotly_html(&resolved_config, &shared_context)?;
+		}
 		debug!(target:APPV,"gnuplot done in: {:?}", now.elapsed());
 	} else {
 		//todo histogram, etc..
