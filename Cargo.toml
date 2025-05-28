@@ -28,6 +28,7 @@ plox_macros = "0.3.0"
 csv = "1.3.1"
 histo_fp = "0.2.1"
 statrs = "0.18.0"
+plotly = "0.12.1"
 
 [dev-dependencies]
 cmd_lib = "1.9.5"

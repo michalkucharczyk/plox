@@ -21,6 +21,7 @@ pub mod graph_cli_builder;
 pub mod graph_config;
 pub mod logging;
 pub mod match_preview_cli_builder;
+pub mod plotly_backend;
 pub mod process_log;
 pub mod resolved_graph_config;
 mod utils;

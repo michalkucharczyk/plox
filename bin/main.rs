@@ -78,6 +78,11 @@ fn inner_main() -> Result<(), Error> {
 
 		let now = Instant::now();
 		gnuplot::run_gnuplot(&resolved_config, &shared_context)?;
+		// plox::plotly_backend::write_plotly_html(
+		// 	&resolved_config,
+		// 	&shared_context,
+		// 	Path::new("/tmp/xxx.html"),
+		// )?;
 		debug!(target:APPV,"gnuplot done in: {:?}", now.elapsed());
 	} else {
 		//todo histogram, etc..
