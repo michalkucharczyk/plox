@@ -36,6 +36,7 @@ combine_datetime(date_col,time_col) = strcol(date_col) . 'T' . strcol(time_col)
 set origin 0.0,0
 set size 1.0,0.3283333333333333
 unset label
+set label 'Points' at graph -0.03,0.5 rotate by 90 center font"arial bold,10" noenhanced
 unset logscale y
 set xrange ["2019-12-31T23:00:18":"2019-12-31T23:16:33"]
 csv_data_file_0000 = '/home/miszka/parity/graph-tool/plox/tests/examples/.plox/some.log_1745784327__x_module__%5Cbx00%3D%28%5B%5Cd%5C.%5D%2B%29%28%5Cw%2B%29%3F.csv'

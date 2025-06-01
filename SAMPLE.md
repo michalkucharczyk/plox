@@ -119,6 +119,7 @@ Draw a graph defined in 👉 [`demo lines`](tests/examples/demo-lines.toml) TOML
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
+	  --timestamp-format "[%s]" \
 	  --output tests/.output/demo-lines.png \
 	  --config tests/examples/demo-lines.toml
 

@@ -62,18 +62,22 @@ fn compare_files_inner(path1: &str, path2: &str) {
 
 			if prefix1 != prefix2 {
 				panic!(
-					"Mismatch found at line {}: Expected line starting with '{}' but found '{}'",
+					"Mismatch found at line {}: Expected line starting with '{}' but found '{}'. {} vs {}",
 					line_num + 1,
 					prefix1,
-					prefix2
+					prefix2,
+					path1,
+					path2
 				);
 			}
 		} else if line1 != line2 {
 			panic!(
-				"Mismatch found at line {}: Expected '{}' but found '{}'",
+				"Mismatch found at line {}: Expected '{}' but found '{}'. {} vs {}",
 				line_num + 1,
 				line1,
-				line2
+				line2,
+				path1,
+				path2
 			);
 		}
 	}
@@ -153,6 +157,7 @@ fn cmd_demo_lines() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/some.log
+		  --timestamp-format "[%s]"
 		  --output tests/.output/demo-lines.png
 		  --config tests/examples/demo-lines.toml
 	)
