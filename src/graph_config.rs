@@ -241,11 +241,16 @@ pub struct OutputGraphContext {
 
 	/// Do not display the graph in the image viewer.
 	///
-	/// If provided, the image viewer (default system or configured by PLOX_IMAGE_VIEWER environment variable) will not
-	/// be opened to display the generated graph image.
+	/// Suppresses launching the system image viewer (or browser for Plotly) to display the output.
+	/// Viewers can be configured via `PLOX_IMAGE_VIEWER` or `PLOX_BROWSER` environment variables.
 	#[arg(long, short = 'x', default_value_t = false, help_heading = "Output files")]
 	#[serde(skip)]
 	pub do_not_display: bool,
+
+	/// Use plotly backend, generated interactive self-contained html file.
+	#[arg(long, short = 'p', default_value_t = false, help_heading = "Backend")]
+	#[serde(skip)]
+	pub plotly_backend: bool,
 }
 
 impl InputFilesContext {
@@ -272,6 +277,14 @@ impl InputFilesContext {
 	pub fn ignore_invalid_timestamps(&self) -> bool {
 		self.ignore_invalid_timestamps
 	}
+}
+
+/// Determines the output file paths, based on selected backend.
+pub enum OutputFilePaths {
+	/// Tuple containging the path to the image and the path to the gnuplot script
+	Gnuplot((PathBuf, PathBuf)),
+	/// The path to the HTML file
+	Plotly(PathBuf),
 }
 
 impl GraphFullContext {
@@ -319,19 +332,29 @@ impl GraphFullContext {
 	}
 
 	/// Returns tuple containging the path to the image and the path to the gnuplot script
-	pub fn get_graph_output_path(&self) -> (PathBuf, PathBuf) {
-		if let Some(ref output_file) = self.output_graph_ctx.inline_output {
-			let common_ancestor =
-				common_path_ancestor(self.input()).unwrap_or_else(|| PathBuf::from("./"));
+	pub fn get_graph_output_path(&self) -> OutputFilePaths {
+		let common_ancestor =
+			common_path_ancestor(self.input()).unwrap_or_else(|| PathBuf::from("./"));
+		if self.output_graph_ctx.plotly_backend {
+			if let Some(ref output_file) = self.output_graph_ctx.inline_output {
+				let html_path = common_ancestor.join(output_file);
+				OutputFilePaths::Plotly(html_path.with_extension("html"))
+			} else {
+				let def = PathBuf::from("graph3.html");
+				let output_file = self.output_graph_ctx.output.as_ref().unwrap_or(&def);
+				let html_path = PathBuf::from(".").join(output_file);
+				OutputFilePaths::Plotly(html_path.with_extension("html"))
+			}
+		} else if let Some(ref output_file) = self.output_graph_ctx.inline_output {
 			let image_path = common_ancestor.join(output_file);
 			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
+			OutputFilePaths::Gnuplot((image_path, gnuplot_path))
 		} else {
 			let def = PathBuf::from("graph.png");
 			let output_file = self.output_graph_ctx.output.as_ref().unwrap_or(&def);
 			let image_path = PathBuf::from(".").join(output_file);
 			let gnuplot_path = image_path.with_extension("gnuplot");
-			(image_path, gnuplot_path)
+			OutputFilePaths::Gnuplot((image_path, gnuplot_path))
 		}
 	}
 
@@ -474,6 +497,12 @@ impl Display for MarkerSize {
 impl Default for LineWidth {
 	fn default() -> Self {
 		Self(1.0)
+	}
+}
+
+impl From<LineWidth> for f64 {
+	fn from(val: LineWidth) -> Self {
+		val.0
 	}
 }
 

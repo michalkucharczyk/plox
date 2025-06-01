@@ -62,18 +62,22 @@ fn compare_files_inner(path1: &str, path2: &str) {
 
 			if prefix1 != prefix2 {
 				panic!(
-					"Mismatch found at line {}: Expected line starting with '{}' but found '{}'",
+					"Mismatch found at line {}: Expected line starting with '{}' but found '{}'. {} vs {}",
 					line_num + 1,
 					prefix1,
-					prefix2
+					prefix2,
+					path1,
+					path2
 				);
 			}
 		} else if line1 != line2 {
 			panic!(
-				"Mismatch found at line {}: Expected '{}' but found '{}'",
+				"Mismatch found at line {}: Expected '{}' but found '{}'. {} vs {}",
 				line_num + 1,
 				line1,
-				line2
+				line2,
+				path1,
+				path2
 			);
 		}
 	}
@@ -86,6 +90,18 @@ fn cmd_simple() -> String {
 		  --input  tests/examples/default.log
 		  --output tests/.output/default.png
 		  --plot om_module x
+	)
+}
+
+#[docify::export_content]
+fn cmd_simple_plotly() -> String {
+	bash!(
+		plox graph
+		  --input  tests/examples/default.log
+		  --output tests/.output/default.html
+		  --plot om_module x
+		  --style=lines-points
+		  --plotly-backend
 	)
 }
 
@@ -114,6 +130,13 @@ fn test_cmd_simple() {
 	plox::logging::init_tracing_test();
 	cmd_simple();
 	compare_files("default.gnuplot");
+}
+
+#[test]
+fn test_cmd_simple_plotly() {
+	plox::logging::init_tracing_test();
+	cmd_simple_plotly();
+	compare_files("default.html");
 }
 
 #[test]
@@ -153,6 +176,7 @@ fn cmd_demo_lines() -> String {
 	bash!(
 		plox graph
 		  --input  tests/examples/some.log
+		  --timestamp-format "[%s]"
 		  --output tests/.output/demo-lines.png
 		  --config tests/examples/demo-lines.toml
 	)
@@ -247,6 +271,22 @@ fn test_cmd_demo_lines_two_files() {
 	plox::logging::init_tracing_test();
 	cmd_demo_lines_two_files();
 	compare_files("demo-lines-two-files.gnuplot");
+}
+
+#[test]
+fn test_cmd_demo_lines_two_files_plotly() {
+	plox::logging::init_tracing_test();
+	bash!(
+		plox graph
+		  --input  tests/examples/default.log
+		  --input  tests/examples/default-other.log
+		  --output tests/.output/demo-lines-two-files.html
+		  --timestamp-format "%Y-%m-%d %H:%M:%S%.3f"
+		  --per-file-panels
+		  --config tests/examples/demo-lines.toml
+		  --plotly-backend
+	);
+	compare_files("demo-lines-two-files.html");
 }
 
 #[test]

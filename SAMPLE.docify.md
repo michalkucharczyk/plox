@@ -19,6 +19,18 @@ Sample matching line ([`log`](tests/examples/default.log)):
 
 ---
 
+### Interactive plots - Plotly Backend
+
+To generate an interactive HTML plot use the `--plotly-backend` option:
+
+<!-- docify::embed!("tests/cmd_tests.rs", cmd_simple_plotly) -->
+
+Here is a [simple interactive graph](https://michalkucharczyk.github.io/plox/tests/examples/default.html) and a more
+[complex one](https://michalkucharczyk.github.io/plox/tests/examples/demo-lines-two-files.html).
+
+---
+
+
 ### Extracting Value Using Regex.
 
 <!-- docify::embed!("tests/cmd_tests.rs", cmd_regex) -->

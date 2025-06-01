@@ -1,5 +1,3 @@
-timestamp_format = "[%s]"
-
 [[panels]]
 panel_title="Steps"
 
@@ -98,7 +96,7 @@ field = "x10"
 style = "lines-points"
 
 [[panels]]
-panelt_title="Points"
+panel_title="Points"
 
 [[panels.lines]]
 guard = "x_module"

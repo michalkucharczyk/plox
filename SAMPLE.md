@@ -25,6 +25,26 @@ Sample matching line ([`log`](tests/examples/default.log)):
 
 ---
 
+### Interactive plots - Plotly Backend
+
+To generate an interactive HTML plot use the `--plotly-backend` option:
+
+```rust,ignore
+plox graph \
+	  --input  tests/examples/default.log \
+	  --output tests/.output/default.html \
+	  --plot om_module x \
+	  --style=lines-points \
+	  --plotly-backend
+
+```
+
+Here is a [simple interactive graph](https://michalkucharczyk.github.io/plox/tests/examples/default.html) and a more
+[complex one](https://michalkucharczyk.github.io/plox/tests/examples/demo-lines-two-files.html).
+
+---
+
+
 ### Extracting Value Using Regex.
 
 ```rust,ignore
@@ -119,6 +139,7 @@ Draw a graph defined in 👉 [`demo lines`](tests/examples/demo-lines.toml) TOML
 ```rust,ignore
 plox graph \
 	  --input  tests/examples/some.log \
+	  --timestamp-format "[%s]" \
 	  --output tests/.output/demo-lines.png \
 	  --config tests/examples/demo-lines.toml
 

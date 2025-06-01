@@ -232,7 +232,7 @@ impl TimeRangeArg {
 				TimestampFormat::Time(fmt) => {
 					let t0 = NaiveTime::parse_from_str(a, fmt)?;
 					let t1 = NaiveTime::parse_from_str(b, fmt)?;
-					let base_date = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(); // safe fallback
+					let base_date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
 					Ok((base_date.and_time(t0), base_date.and_time(t1)))
 				},
 			},

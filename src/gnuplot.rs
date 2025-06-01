@@ -5,7 +5,10 @@
 //! of gnuplot and the saving of resulting graph images.
 
 use crate::{
-	graph_config::{AxisScale, Color, DashStyle, GraphFullContext, MarkerType, PlotStyle, YAxis},
+	graph_config::{
+		AxisScale, Color, DashStyle, GraphFullContext, MarkerType, OutputFilePaths, PlotStyle,
+		YAxis,
+	},
 	logging::APPV,
 	resolved_graph_config::{ResolvedGraphConfig, ResolvedLine},
 };
@@ -33,6 +36,10 @@ pub enum Error {
 	GnuplotNonZeroExitCode(ExitStatus, String, String),
 	#[error("Error while creating gnuplot script '{0}': {1}")]
 	ScriptCreationError(PathBuf, io::Error),
+	#[error("Incorrect input files (this is bug).")]
+	IncorrectOutputFiles,
+	#[error("Parsing log error: {0} (this is bug?)")]
+	ParsingLogError(#[from] crate::process_log::Error),
 }
 
 impl MarkerType {
@@ -231,19 +238,46 @@ pub fn write_gnuplot_script(
 			gpwr!(file, "set xrange [\"{}\":\"{}\"]", start.format(format), end.format(format))?;
 		}
 
+		let mut non_empty_lines = vec![];
 		for (j, line) in panel.lines.iter().enumerate() {
-			let csv_data_path = line
-				.shared_csv_filename()
-				.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
-			gpwr!(file, "csv_data_file_{j:04} = '{}'", csv_data_path.display())?;
+			let has_data_points = if let Some((start, end)) = panel.time_range {
+				let has_data_points = line.has_data_points_in_time_range(start, end)?;
+				if !has_data_points {
+					warn!(target:APPV,
+						input_file = ?line.source_file_name().display(),
+						guard = ?line.guard(),
+						regex = line.regex_pattern(),
+						"No data points in given range.");
+				}
+				has_data_points
+			} else {
+				!line.is_empty()
+			};
+			if has_data_points {
+				let csv_data_path = line
+					.shared_csv_filename()
+					.ok_or(Error::CvsFilesResolutionError(Box::new(line.clone())))?;
+				gpwr!(file, "csv_data_file_{j:04} = '{}'", csv_data_path.display())?;
+				non_empty_lines.push((j, line));
+			}
 		}
 
-		gpwr!(file, "plot \\")?;
-		for (j, line) in panel.lines.iter().enumerate() {
-			// build style parts
+		if !non_empty_lines.is_empty() {
+			gpwr!(file, "plot \\")?;
+		} else if let Some((start, end)) = panel.time_range {
+			warn!(target:APPV,
+				title = ?panel.title(),
+				?start,
+				?end,
+				"No data points in given range for panel.");
+		} else {
+			warn!(target:APPV,
+				title = ?panel.title(),
+				"No data points for panel.");
+		};
+		for (j, line) in non_empty_lines {
 			let mut style_parts: Vec<String> = Vec::new();
 
-			// plot style (lines/steps/points/linespoints)
 			style_parts.push(line.line.params.style.to_gnuplot().into());
 			if let Some(dash_style) = &line.line.params.dash_style {
 				style_parts.push(dash_style.to_gnuplot().into());
@@ -258,7 +292,6 @@ pub fn write_gnuplot_script(
 			}
 
 			if matches!(line.line.params.style, PlotStyle::LinesPoints | PlotStyle::Points) {
-				// markers
 				if let Some(marker) = &line.line.params.marker_type {
 					style_parts.push(marker.to_gnuplot().into());
 				}
@@ -269,7 +302,6 @@ pub fn write_gnuplot_script(
 				}
 			}
 
-			// axis selection
 			let axis = match line.line.params.yaxis.as_ref().unwrap_or(&YAxis::Y) {
 				YAxis::Y2 => "axes x1y2",
 				YAxis::Y => "axes x1y1",
@@ -313,7 +345,10 @@ fn path_to_display(path: &Path) -> &Path {
 
 /// Write gnuplot script and immediately execute it with `gnuplot`.
 pub fn run_gnuplot(config: &ResolvedGraphConfig, context: &GraphFullContext) -> Result<(), Error> {
-	let (image_path, script_path) = context.get_graph_output_path();
+	let OutputFilePaths::Gnuplot((image_path, script_path)) = context.get_graph_output_path()
+	else {
+		return Err(Error::IncorrectOutputFiles);
+	};
 
 	write_gnuplot_script(config, context, &script_path, &image_path)?;
 	let script_path = if context.output_graph_ctx.display_absolute_paths {

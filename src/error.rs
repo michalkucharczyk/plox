@@ -31,4 +31,7 @@ pub enum Error {
 
 	#[error("Time ranges resolution error. {0}")]
 	TimeRangesResolution(#[from] crate::align_ranges::Error),
+
+	#[error("Plotly generation error. {0}")]
+	PlotlyError(#[from] crate::plotly_backend::Error),
 }
