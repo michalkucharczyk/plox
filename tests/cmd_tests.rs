@@ -94,6 +94,18 @@ fn cmd_simple() -> String {
 }
 
 #[docify::export_content]
+fn cmd_simple_plotly() -> String {
+	bash!(
+		plox graph
+		  --input  tests/examples/default.log
+		  --output tests/.output/default.html
+		  --plot om_module x
+		  --style=lines-points
+		  --plotly-backend
+	)
+}
+
+#[docify::export_content]
 #[allow(dead_code)]
 fn cmd_simple_readme_no_outputs() -> String {
 	bash!(
@@ -118,6 +130,13 @@ fn test_cmd_simple() {
 	plox::logging::init_tracing_test();
 	cmd_simple();
 	compare_files("default.gnuplot");
+}
+
+#[test]
+fn test_cmd_simple_plotly() {
+	plox::logging::init_tracing_test();
+	cmd_simple_plotly();
+	compare_files("default.html");
 }
 
 #[test]
