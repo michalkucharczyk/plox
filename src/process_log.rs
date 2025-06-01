@@ -13,6 +13,7 @@ use crate::{
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, ParseError, TimeDelta};
 use regex::Regex;
 use serde::Deserialize;
+use statrs::statistics::{Data, OrderStatistics, Statistics};
 use std::{
 	collections::HashMap,
 	fs::{self, File},
@@ -25,6 +26,12 @@ use tracing_subscriber::{EnvFilter, Layer, Registry, layer::SubscriberExt};
 
 const LOG_TARGET: &str = "csv";
 pub const MATCH_PREVIEW: &str = "match-preview";
+
+// Date format used to serialize record into CSV file
+const RECORD_DATE_FORMAT: &str = "%Y-%m-%d";
+
+// Time format used to serialize record into CSV file
+const RECORD_TIME_FORMAT: &str = "%H:%M:%S%.3f";
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -186,8 +193,8 @@ impl LineProcessor {
 	}
 
 	pub fn process(&mut self, caps: regex::Captures, timestamp: ExtractedNaiveDateTime) {
-		let date = timestamp.date().map(|d| d.format("%Y-%m-%d").to_string());
-		let time = timestamp.time().format("%H:%M:%S%.3f").to_string();
+		let date = timestamp.date().map(|d| d.format(RECORD_DATE_FORMAT).to_string());
+		let time = timestamp.time().format(RECORD_TIME_FORMAT).to_string();
 		let count = self.state.next_count();
 		let diff = self.state.compute_delta(timestamp);
 
@@ -976,9 +983,41 @@ impl fmt::Display for PloxHisto {
 		Ok(())
 	}
 }
-use statrs::statistics::Data;
-use statrs::statistics::OrderStatistics;
-use statrs::statistics::Statistics;
+
+impl ResolvedLine {
+	pub fn has_data_points_in_time_range(
+		&self,
+		start: NaiveDateTime,
+		end: NaiveDateTime,
+	) -> Result<bool, Error> {
+		let filename = self.expect_shared_csv_filename();
+		let mut rdr = csv::Reader::from_path(&filename)
+			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+		for result in rdr.deserialize() {
+			let record: LogRecord =
+				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
+
+			//todo: clean up date
+			let record_ts = NaiveDateTime::new(
+				NaiveDate::parse_from_str(
+					&record.date.expect("date is always written into csv"),
+					RECORD_DATE_FORMAT,
+				)?,
+				NaiveTime::parse_from_str(&record.time, RECORD_TIME_FORMAT)?,
+			);
+
+			if record_ts >= start && record_ts < end {
+				return Ok(true);
+			}
+
+			if record_ts > end {
+				return Ok(false);
+			}
+		}
+		Ok(false)
+	}
+}
+
 pub fn display_stats(
 	config: &ResolvedGraphConfig,
 	buckets_count: u64,

@@ -19,17 +19,28 @@
   {% endfor %}
 
   <script>
-    function makeLayout(title) {
-      return {
-        title: { text: title, font: { size: 14 } },
-        margin: { l: 50, r: 30, t: 30, b: 30 },
-        height: 600,
-        showlegend: true,
-	legend: { orientation: "h", x: 0, y: -0.3 }
-      };
+    function makeLayout(title, scale) {
+		return {
+			title: { text: title, font: { size: 14 } },
+			margin: { l: 50, r: 30, t: 30, b: 30 },
+			height: 600,
+			showlegend: true,
+			legend: { orientation: "h", x: 0, y: -0.3 },
+			yaxis: {
+				title: "Y Axis 1",
+				type: scale,
+				side: "left"
+			},
+			yaxis2: {
+				title: "Y Axis 2",
+				type: scale,
+				overlaying: "y",
+				side: "right"
+			}
+		};
     }
     {% for panel in panels %}
-    Plotly.newPlot("{{ panel.id }}", {{ panel.traces_json }}, makeLayout("{{ panel.title }}"));
+	Plotly.newPlot("{{ panel.id }}", {{ panel.traces_json }}, makeLayout("{{ panel.title }}", "{{ panel.yaxis_scale }}"));
     {% endfor %}
 
 	const plots = {{ panels | map(attribute="id") | list | tojson }};

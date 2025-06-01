@@ -264,18 +264,16 @@ pub fn write_gnuplot_script(
 
 		if !non_empty_lines.is_empty() {
 			gpwr!(file, "plot \\")?;
-		} else {
-			if let Some((start, end)) = panel.time_range {
-				warn!(target:APPV,
+		} else if let Some((start, end)) = panel.time_range {
+			warn!(target:APPV,
 				title = ?panel.title(),
 				?start,
 				?end,
 				"No data points in given range for panel.");
-			} else {
-				warn!(target:APPV,
+		} else {
+			warn!(target:APPV,
 				title = ?panel.title(),
 				"No data points for panel.");
-			};
 		};
 		for (j, line) in non_empty_lines {
 			let mut style_parts: Vec<String> = Vec::new();

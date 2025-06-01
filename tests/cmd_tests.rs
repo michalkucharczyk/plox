@@ -255,6 +255,22 @@ fn test_cmd_demo_lines_two_files() {
 }
 
 #[test]
+fn test_cmd_demo_lines_two_files_plotly() {
+	plox::logging::init_tracing_test();
+	bash!(
+		plox graph
+		  --input  tests/examples/default.log
+		  --input  tests/examples/default-other.log
+		  --output tests/.output/demo-lines-two-files.html
+		  --timestamp-format "%Y-%m-%d %H:%M:%S%.3f"
+		  --per-file-panels
+		  --config tests/examples/demo-lines.toml
+		  --plotly-backend
+	);
+	compare_files("demo-lines-two-files.html");
+}
+
+#[test]
 #[should_panic(expected = "Error occured when extracting timestamp")]
 fn test_cmd_bad_timestamp() {
 	bash!(

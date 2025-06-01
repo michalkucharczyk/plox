@@ -241,8 +241,8 @@ pub struct OutputGraphContext {
 
 	/// Do not display the graph in the image viewer.
 	///
-	/// If provided, the image viewer (default system or configured by PLOX_IMAGE_VIEWER environment variable) will not
-	/// be opened to display the generated graph image.
+	/// Suppresses launching the system image viewer (or browser for Plotly) to display the output.
+	/// Viewers can be configured via `PLOX_IMAGE_VIEWER` or `PLOX_BROWSER` environment variables.
 	#[arg(long, short = 'x', default_value_t = false, help_heading = "Output files")]
 	#[serde(skip)]
 	pub do_not_display: bool,
@@ -338,12 +338,12 @@ impl GraphFullContext {
 		if self.output_graph_ctx.plotly_backend {
 			if let Some(ref output_file) = self.output_graph_ctx.inline_output {
 				let html_path = common_ancestor.join(output_file);
-				OutputFilePaths::Plotly(html_path)
+				OutputFilePaths::Plotly(html_path.with_extension("html"))
 			} else {
 				let def = PathBuf::from("graph3.html");
 				let output_file = self.output_graph_ctx.output.as_ref().unwrap_or(&def);
 				let html_path = PathBuf::from(".").join(output_file);
-				OutputFilePaths::Plotly(html_path)
+				OutputFilePaths::Plotly(html_path.with_extension("html"))
 			}
 		} else if let Some(ref output_file) = self.output_graph_ctx.inline_output {
 			let image_path = common_ancestor.join(output_file);
@@ -497,6 +497,12 @@ impl Display for MarkerSize {
 impl Default for LineWidth {
 	fn default() -> Self {
 		Self(1.0)
+	}
+}
+
+impl From<LineWidth> for f64 {
+	fn from(val: LineWidth) -> Self {
+		val.0
 	}
 }
 
