@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plox Graph</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    html, body {
+        height: auto;
+          overflow-y: scroll;
+      }	  
+    .plot-panel { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  
+    <div id="plot0" class="plot-panel"></div>
+  
+
+  <script>
+    function makeLayout(title, scale) {
+		return {
+			title: { text: title, font: { size: 14 } },
+			margin: { l: 50, r: 30, t: 30, b: 30 },
+			height: 600,
+			showlegend: true,
+			legend: { orientation: "h", x: 0, y: -0.3 },
+			yaxis: {
+				title: "Y Axis 1",
+				type: scale,
+				side: "left"
+			},
+			yaxis2: {
+				title: "Y Axis 2",
+				type: scale,
+				overlaying: "y",
+				side: "right"
+			}
+		};
+    }
+    
+	Plotly.newPlot("plot0", [{"type":"scatter","name":"value of om_module x","mode":"lines+markers","x":["2020-01-01 00:00:00.000","2020-01-01 00:00:34.000","2020-01-01 00:00:50.000","2020-01-01 00:01:22.000","2020-01-01 00:01:34.000","2020-01-01 00:02:20.000","2020-01-01 00:02:46.000","2020-01-01 00:03:10.000","2020-01-01 00:04:17.000","2020-01-01 00:04:25.000","2020-01-01 00:04:30.000","2020-01-01 00:05:38.000","2020-01-01 00:05:46.000","2020-01-01 00:05:56.000","2020-01-01 00:06:31.000","2020-01-01 00:06:38.000","2020-01-01 00:06:59.000","2020-01-01 00:08:43.000","2020-01-01 00:08:54.000","2020-01-01 00:09:46.000","2020-01-01 00:10:00.000","2020-01-01 00:13:19.000","2020-01-01 00:14:46.000","2020-01-01 00:15:57.000","2020-01-01 00:16:12.000"],"y":[1000.0,965.97,949.95,917.92,905.91,859.86,833.83,809.81,742.74,734.73,729.73,661.66,653.65,643.64,608.61,601.6,580.58,476.48,465.47,413.41,399.4,200.2,113.11,42.04,27.03],"yaxis":"y","marker":{"size":2},"line":{"width":0.5}}], makeLayout("", "linear"));
+    
+
+	const plots = ["plot0"];
+    const isSyncing = {};
+    plots.forEach(id => isSyncing[id] = false);
+
+    plots.forEach(sourceId => {
+      const sourceEl = document.getElementById(sourceId);
+      const others = plots.filter(id => id !== sourceId);
+
+      sourceEl.on('plotly_relayout', e => {
+        if (isSyncing[sourceId]) return;
+
+        if (e['xaxis.range[0]'] && e['xaxis.range[1]']) {
+          const range = [e['xaxis.range[0]'], e['xaxis.range[1]']];
+          others.forEach(targetId => {
+            isSyncing[targetId] = true;
+            Plotly.relayout(targetId, { 'xaxis.range': range }).then(() => {
+              isSyncing[targetId] = false;
+            });
+          });
+        }
+
+        if (e['xaxis.autorange']) {
+          others.forEach(targetId => {
+            isSyncing[targetId] = true;
+            Plotly.relayout(targetId, { 'xaxis.autorange': true }).then(() => {
+              isSyncing[targetId] = false;
+            });
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
