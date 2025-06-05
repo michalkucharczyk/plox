@@ -108,7 +108,7 @@ impl MarkerType {
 
 impl From<MarkerSize> for usize {
 	fn from(val: MarkerSize) -> Self {
-		(val.0).round() as usize
+		(2.0 * val.0).round() as usize
 	}
 }
 
