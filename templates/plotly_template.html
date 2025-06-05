@@ -119,18 +119,6 @@
           showlegend: true,
           legend: { orientation: "h", x: 0, y: -0.3 },
 
-          // not sure which approach is better. This syncs the line only over the points.
-          // hovermode: 'x',
-          // spikedistance: -1,
-          // xaxis: {
-          //   showspikes: true,
-          //   spikemode: 'across',
-          //   spikesnap: 'cursor',
-          //   spikedash: 'dot',
-          //   spikecolor: 'black',
-          //   spikethickness: 1
-          // },
-
           yaxis: {
             title: "Y Axis 1",
             type: scale,
@@ -288,33 +276,6 @@
       Promise.all(plotPromises).then(() => {
         enableGlobalCursorLine(plots);
       });
-
-      // not sure which approach is better. This syncs the line only over the points.
-      // plots.forEach((sourceId, i) => {
-      //   const sourcePlot = document.getElementById(sourceId);
-      //   const targets = plots.filter((_, j) => j !== i).map(id => document.getElementById(id));
-      //
-      //   sourcePlot.on('plotly_hover', data => {
-      //     const xVal = data.points[0].x;
-      //     targets.forEach(plot => {
-      //       Plotly.relayout(plot, {
-      //         shapes: [{
-      //           type: 'line',
-      //           x0: xVal,
-      //           x1: xVal,
-      //           yref: 'paper',
-      //           y0: 0,
-      //           y1: 1,
-      //           line: { color: 'black', width: 1, dash: 'dot' }
-      //         }]
-      //       });
-      //     });
-      //   });
-      //
-      //   sourcePlot.on('plotly_unhover', () => {
-      //     targets.forEach(plot => Plotly.relayout(plot, { shapes: [] }));
-      //   });
-      // });
 
       const isSyncing = {};
       plots.forEach(id => isSyncing[id] = false);
