@@ -1,80 +1,363 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Plox Graph</title>
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-  <style>
-    body { font-family: sans-serif; margin: 20px; }
-    html, body {
+  <head>
+    <meta charset="UTF-8">
+    <title>Plox Graph</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+      body { font-family: sans-serif; margin: 20px; }
+      html, body {
         height: auto;
-          overflow-y: scroll;
-      }	  
-    .plot-panel { margin-bottom: 10px; }
-  </style>
-</head>
-<body>
-  {% for panel in panels %}
-    <div id="{{ panel.id }}" class="plot-panel"></div>
-  {% endfor %}
+        overflow-y: scroll;
+      }   
+      .plot-panel { margin-bottom: 10px; }
+      .plot-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: sans-serif;
+        margin-bottom: 5px;
+      }
 
-  <script>
-    function makeLayout(title, scale) {
-		return {
-			title: { text: title, font: { size: 14 } },
-			margin: { l: 50, r: 30, t: 30, b: 30 },
-			height: 600,
-			showlegend: true,
-			legend: { orientation: "h", x: 0, y: -0.3 },
-			yaxis: {
-				title: "Y Axis 1",
-				type: scale,
-				side: "left"
-			},
-			yaxis2: {
-				title: "Y Axis 2",
-				type: scale,
-				overlaying: "y",
-				side: "right"
-			}
-		};
-    }
-    {% for panel in panels %}
-	Plotly.newPlot("{{ panel.id }}", {{ panel.traces_json }}, makeLayout("{{ panel.title }}", "{{ panel.yaxis_scale }}"));
-    {% endfor %}
+      .plot-title {
+        font-weight: bold;
+        font-size: 14px;
+        white-space: nowrap;
+      }
 
-	const plots = {{ panels | map(attribute="id") | list | tojson }};
-    const isSyncing = {};
-    plots.forEach(id => isSyncing[id] = false);
+      .plot-toolbar {
+        display: flex;
+        gap: 4px;
+      }
 
-    plots.forEach(sourceId => {
-      const sourceEl = document.getElementById(sourceId);
-      const others = plots.filter(id => id !== sourceId);
+      .plot-toolbar button {
+        background: white;
+        border: 1px solid black;
+        padding: 3px 6px;
+        font-family: monospace;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
 
-      sourceEl.on('plotly_relayout', e => {
-        if (isSyncing[sourceId]) return;
+      .plot-toolbar button:hover {
+        background: black;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="plot-container">
+      {% for panel in panels %}
+      <div class="plot-wrapper" data-panel-id="{{ panel.id }}">
+        <div class="plot-controls">
+          <div class="plot-title">{{ panel.title }}</div>
+          <div class="plot-toolbar">
+            <button onclick="toggleScale('{{ panel.id }}', this)" title="Toggle Y axis scale (log or lin)">Lin</button>
+            <button onclick="moveUp('{{ panel.id }}')" title="Move this plot up">↑</button>
+            <button onclick="moveDown('{{ panel.id }}')" title="Move this plot down">↓</button>
+            <button onclick="toggleVisibility('{{ panel.id }}', this)" title="Hide or show this plot">Hide</button>
 
-        if (e['xaxis.range[0]'] && e['xaxis.range[1]']) {
-          const range = [e['xaxis.range[0]'], e['xaxis.range[1]']];
-          others.forEach(targetId => {
-            isSyncing[targetId] = true;
-            Plotly.relayout(targetId, { 'xaxis.range': range }).then(() => {
-              isSyncing[targetId] = false;
+          </div>
+        </div>
+        <div id="{{ panel.id }}" class="plot-panel"></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <script>
+      function toggleVisibility(id, buttonEl) {
+        const plotEl = document.getElementById(id);
+        const isVisible = plotEl.style.display !== 'none';
+
+        plotEl.style.display = isVisible ? 'none' : '';
+        buttonEl.textContent = isVisible ? 'Show' : 'Hide';
+      }
+
+      function toggleScale(id, buttonEl) {
+        const current = buttonEl.textContent.toLowerCase();
+        const newScale = current === 'lin' ? 'log' : 'linear';
+
+        Plotly.relayout(id, {
+          'yaxis.type': newScale,
+          'yaxis.autorange': true
+        }).then(() => {
+          buttonEl.textContent = newScale === 'linear' ? 'Lin' : 'Log';
+        }).catch(err => {
+          console.error("Scale toggle failed:", err);
+          alert("Could not switch scale. Ensure all Y values are > 0 for log.");
+        });
+      }
+
+      function moveDown(id) {
+        const wrapper = document.querySelector(`[data-panel-id="${id}"]`);
+        const container = document.getElementById("plot-container");
+
+        if (!wrapper || wrapper.parentNode !== container) return;
+
+        const next = wrapper.nextElementSibling;
+        if (!next) return;
+
+        container.insertBefore(wrapper, next.nextElementSibling);
+      }
+
+      function moveUp(id) {
+        const wrapper = document.querySelector(`[data-panel-id="${id}"]`);
+        const container = document.getElementById("plot-container");
+
+        if (!wrapper || wrapper.parentNode !== container) return;
+
+        const prev = wrapper.previousElementSibling;
+        if (prev) container.insertBefore(wrapper, prev);
+      }
+
+      function makeLayout(title, scale, xrange) {
+        const layout =  {
+          // title: { text: title, font: { size: 14 } },
+          margin: { l: 50, r: 30, t: 30, b: 30 },
+          height: 400,
+          showlegend: true,
+          legend: { orientation: "h", x: 0, y: -0.3 },
+
+          // not sure which approach is better. This syncs the line only over the points.
+          // hovermode: 'x',
+          // spikedistance: -1,
+          // xaxis: {
+          //   showspikes: true,
+          //   spikemode: 'across',
+          //   spikesnap: 'cursor',
+          //   spikedash: 'dot',
+          //   spikecolor: 'black',
+          //   spikethickness: 1
+          // },
+
+          yaxis: {
+            title: "Y Axis 1",
+            type: scale,
+            side: "left"
+          },
+          yaxis2: {
+            title: "Y Axis 2",
+            type: scale,
+            overlaying: "y",
+            side: "right"
+          }
+        };
+
+        if (xrange) {
+          layout.xaxis = { range: xrange };
+        }
+        return layout;
+      }
+
+      // OMG :)
+      function enableGlobalCursorLine(plotIds) {
+        console.log("enableGlobalCursorLine called with plots:", plotIds);
+
+        let currentLineX = null;
+
+        plotIds.forEach(sourceId => {
+          const sourceEl = document.getElementById(sourceId);
+          if (!sourceEl) {
+            console.warn(`Plot element with id "${sourceId}" not found.`);
+            return;
+          }
+
+          sourceEl.addEventListener('mousemove', event => {
+            const bbox = sourceEl.getBoundingClientRect();
+            const xPixel = event.clientX - bbox.left;
+            const yPixel = event.clientY - bbox.top;
+
+            const layout = sourceEl._fullLayout;
+            if (!layout) {
+              console.warn(`_fullLayout not available for plot "${sourceId}"`);
+              return;
+            }
+
+            const xaxis = layout.xaxis;
+            if (!xaxis) {
+              console.warn(`xaxis not found in _fullLayout for plot "${sourceId}"`);
+              return;
+            }
+
+            // Check if cursor is inside the x axis range in pixels
+            if (xPixel < xaxis._offset || xPixel > xaxis._offset + xaxis._length) {
+              // Outside plot x axis area
+              // console.log(`Cursor outside x axis range on plot "${sourceId}": xPixel=${xPixel}`);
+              return;
+            }
+
+            // Convert pixel to data coordinate
+            let xValue;
+            try {
+              // Use Plotly's internal methods to convert pixel to data
+              // c2d = coordinate to data, p2c = pixel to coordinate
+              if (typeof xaxis.p2c === 'function' && typeof xaxis.c2d === 'function') {
+                const coord = xaxis.p2c(xPixel - xaxis._offset);
+                xValue = xaxis.c2d(coord);
+              } else {
+                xValue = xaxis.p2d ? xaxis.p2d(xPixel - xaxis._offset) : null;
+              }
+
+            } catch (err) {
+              console.error("Error converting pixel to x value:", err);
+              return;
+            }
+
+            if (!xValue) {
+              console.warn(`Could not determine xValue under cursor for plot "${sourceId}"`);
+              return;
+            }
+
+            // For date axes, xValue is milliseconds since epoch or Date object
+            // Normalize to ISO string for Plotly shape x0/x1
+            let xISO;
+            if (typeof xValue === "number") {
+              xISO = new Date(xValue).toISOString();
+            } else if (xValue instanceof Date) {
+              xISO = xValue.toISOString();
+            } else if (typeof xValue === "string") {
+              xISO = xValue; // assume ISO string
+            } else {
+              console.warn(`Unexpected xValue type for plot "${sourceId}":`, xValue);
+              return;
+            }
+
+            // Avoid redundant relayout calls if line is already at this position
+            if (currentLineX === xISO) {
+              //console.log("Line already at this position:", xISO);
+              return;
+            }
+
+            currentLineX = xISO;
+
+            // console.log(`Cursor at pixel ${xPixel}, xValue: ${xValue}, xISO: ${xISO}`);
+
+            plotIds.forEach(id => {
+              Plotly.relayout(id, {
+                shapes: [{
+                  type: 'line',
+                  x0: xISO,
+                  x1: xISO,
+                  yref: 'paper',
+                  y0: 0,
+                  y1: 1,
+                  line: { color: 'black', width: 1, dash: 'dot' },
+                  layer: 'above'
+                }]
+              }).catch(err => {
+                console.error(`Error updating shape on plot "${id}":`, err);
+              });
             });
           });
-        }
 
-        if (e['xaxis.autorange']) {
-          others.forEach(targetId => {
-            isSyncing[targetId] = true;
-            Plotly.relayout(targetId, { 'xaxis.autorange': true }).then(() => {
-              isSyncing[targetId] = false;
+          sourceEl.addEventListener('mouseleave', () => {
+            // console.log(`Mouse left plot "${sourceId}", removing vertical line.`);
+            plotIds.forEach(id => {
+              Plotly.relayout(id, { shapes: [] }).catch(err => {
+                console.error(`Error removing shapes on plot "${id}":`, err);
+              });
             });
+            currentLineX = null;
           });
-        }
+        });
+      }
+
+      const config = {
+        displaylogo: false,
+        modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
+        responsive: true
+      };
+
+      const plotPromises = [];
+      {% for panel in panels %}
+      plotPromises.push(Plotly.newPlot(
+        "{{ panel.id }}", 
+        {{ panel.traces_json }}, 
+        makeLayout(
+          "{{ panel.title }}", 
+          "{{ panel.yaxis_scale }}",
+          {{ panel.time_range | tojson }}
+        ),
+
+        config
+      ));
+      {% endfor %}
+
+      const plots = {{ panels | map(attribute="id") | list | tojson }};
+      Promise.all(plotPromises).then(() => {
+        enableGlobalCursorLine(plots);
       });
-    });
-  </script>
-</body>
+
+      // not sure which approach is better. This syncs the line only over the points.
+      // plots.forEach((sourceId, i) => {
+      //   const sourcePlot = document.getElementById(sourceId);
+      //   const targets = plots.filter((_, j) => j !== i).map(id => document.getElementById(id));
+      //
+      //   sourcePlot.on('plotly_hover', data => {
+      //     const xVal = data.points[0].x;
+      //     targets.forEach(plot => {
+      //       Plotly.relayout(plot, {
+      //         shapes: [{
+      //           type: 'line',
+      //           x0: xVal,
+      //           x1: xVal,
+      //           yref: 'paper',
+      //           y0: 0,
+      //           y1: 1,
+      //           line: { color: 'black', width: 1, dash: 'dot' }
+      //         }]
+      //       });
+      //     });
+      //   });
+      //
+      //   sourcePlot.on('plotly_unhover', () => {
+      //     targets.forEach(plot => Plotly.relayout(plot, { shapes: [] }));
+      //   });
+      // });
+
+      const isSyncing = {};
+      plots.forEach(id => isSyncing[id] = false);
+
+      plots.forEach(sourceId => {
+        const sourceEl = document.getElementById(sourceId);
+        const others = plots.filter(id => id !== sourceId);
+
+        sourceEl.on('plotly_relayout', e => {
+          if (isSyncing[sourceId]) return;
+          // console.log(`Relayout event on ${sourceId}:`, e);
+          let range = null;
+
+          if (Array.isArray(e['xaxis.range'])) {
+            // Case: Reset axes
+            range = e['xaxis.range'];
+          } else if (e['xaxis.range[0]'] && e['xaxis.range[1]']) {
+            // Case: manual zoom/pan
+            range = [e['xaxis.range[0]'], e['xaxis.range[1]']];
+          }
+
+          if (range) {
+            others.forEach(targetId => {
+              isSyncing[targetId] = true;
+              Plotly.relayout(targetId, { 'xaxis.range': range }).then(() => {
+                isSyncing[targetId] = false;
+              });
+            });
+          }
+
+          if (e['xaxis.autorange']) {
+            console.log(`Relayout event on ${sourceId}:`, e);
+            others.forEach(targetId => {
+              isSyncing[targetId] = true;
+              Plotly.relayout(targetId, { 'xaxis.autorange': true }).then(() => {
+                isSyncing[targetId] = false;
+              });
+            });
+          }
+        });
+
+      });
+    </script>
+  </body>
 </html>
 
