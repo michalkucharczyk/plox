@@ -74,7 +74,7 @@ struct ProcessingState {
 }
 
 /// Single record extracted from a matching log line, with some extra stats.
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 struct LogRecord {
 	pub date: Option<String>,
 	pub time: String,
@@ -1022,7 +1022,7 @@ impl ResolvedLine {
 		let mut rdr = csv::Reader::from_path(&filename)
 			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 		for result in rdr.deserialize() {
-			let record: LogRecord =
+			let record: CvsLogRecord =
 				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 
 			//todo: clean up date
@@ -1046,6 +1046,16 @@ impl ResolvedLine {
 	}
 }
 
+#[derive(Debug, Deserialize)]
+struct CvsLogRecord {
+	pub date: Option<String>,
+	pub time: String,
+	pub value: f64,
+	#[allow(dead_code)]
+	pub count: u64,
+	pub delta: f64,
+}
+
 pub fn display_stats(
 	config: &ResolvedGraphConfig,
 	buckets_count: u64,
@@ -1060,13 +1070,13 @@ pub fn display_stats(
 			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 		let mut values: Vec<f64> = vec![];
 		for result in rdr.deserialize() {
-			let record: LogRecord =
+			let record: CvsLogRecord =
 				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 
 			match &line.line.data_source {
 				DataSource::FieldValue { .. } => values.push(record.value),
 				DataSource::EventDelta { .. } => {
-					record.diff.inspect(|v| values.push(*v));
+					values.push(record.delta);
 				},
 				_ => {
 					unreachable!("this is bug.");
@@ -1114,14 +1124,12 @@ pub fn display_values(config: &ResolvedGraphConfig) -> Result<(), Error> {
 		let mut rdr = csv::Reader::from_path(&filename)
 			.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 		for result in rdr.deserialize() {
-			let record: LogRecord =
+			let record: CvsLogRecord =
 				result.map_err(|e| Error::CsvParseError(filename.clone(), e))?;
 
 			match &line.line.data_source {
 				DataSource::FieldValue { .. } => println!("{:?}", record.value),
-				DataSource::EventDelta { .. } => {
-					record.diff.inspect(|v| println!("{:?}", v));
-				},
+				DataSource::EventDelta { .. } => println!("{:?}", record.delta),
 				_ => {
 					unreachable!("this is bug.");
 				},
