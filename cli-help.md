@@ -171,6 +171,11 @@ Input files:
           
           Ignores invalid timestamps. Useful when log contains line with invalid or no timestamp (e.g. stacktraces).
 
+      --guard <GUARDS>
+          Optional guard strings to quickly filter out log lines using `strcmp`.
+          
+          Only lines containing all guards will be passed for plotting data extraction.
+
   -c, --config <FILE>
           Path to TOML config file containing panels layout.
 

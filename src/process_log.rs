@@ -94,15 +94,17 @@ struct LineProcessor {
 	timestamp_extraction_failure_count: usize,
 	input_file_name: PathBuf,
 	ignore_invalid_timestamps: bool,
+	pub global_guards: Vec<String>,
 }
 
 impl LineProcessor {
-	pub fn from_data_source(
+	pub fn from_data_source_with_global_guards(
 		data_source: DataSource,
 		output_path: Option<PathBuf>,
 		timestamp_format: TimestampFormat,
 		input_file_name: PathBuf,
 		ignore_invalid_timestamps: bool,
+		global_guards: Vec<String>,
 	) -> Result<Self, Error> {
 		let regex = data_source.compile_regex()?;
 		Ok(Self {
@@ -115,7 +117,25 @@ impl LineProcessor {
 			timestamp_extraction_failure_count: 0,
 			input_file_name,
 			ignore_invalid_timestamps,
+			global_guards,
 		})
+	}
+
+	pub fn from_data_source(
+		data_source: DataSource,
+		output_path: Option<PathBuf>,
+		timestamp_format: TimestampFormat,
+		input_file_name: PathBuf,
+		ignore_invalid_timestamps: bool,
+	) -> Result<Self, Error> {
+		Self::from_data_source_with_global_guards(
+			data_source,
+			output_path,
+			timestamp_format,
+			input_file_name,
+			ignore_invalid_timestamps,
+			vec![],
+		)
 	}
 
 	/// Parses timestamp prefix from the line.
@@ -150,7 +170,11 @@ impl LineProcessor {
 	}
 
 	pub fn guard_matches(&self, log_line: &str) -> bool {
-		self.data_source.guard().as_ref().map(|g| log_line.contains(g)).unwrap_or(true)
+		self.data_source
+			.guard()
+			.into_iter()
+			.chain(self.global_guards.iter())
+			.all(|g| log_line.contains(g))
 	}
 
 	pub fn try_match<'a>(
@@ -435,7 +459,7 @@ impl ResolvedLine {
 	///
 	/// This naming strategy ensures that multiple lines using the same pattern and guard
 	/// will map to the same CSV file, enabling output reuse and avoiding redundant processing.
-	pub fn get_csv_filename(&self) -> PathBuf {
+	pub fn get_csv_filename(&self, global_guards: &[String]) -> PathBuf {
 		let tag = self.regex_filename_tag();
 		let core = match &self.line.data_source {
 			DataSource::EventValue { yvalue, .. } => format!("value_{yvalue}_{tag}"),
@@ -457,10 +481,12 @@ impl ResolvedLine {
 			.map(|d| d.as_secs().to_string())
 			.unwrap_or_else(|_| "nots".to_string());
 
+		let global_guards = global_guards.join("___");
+
 		PathBuf::from(if let Some(guard) = self.line.data_source.guard() {
-			format!("{log_name}_{ts}__{guard}__{core}.csv")
+			format!("{log_name}_{ts}__{global_guards}__{guard}__{core}.csv")
 		} else {
-			format!("{log_name}_{ts}__{core}.csv")
+			format!("{log_name}_{ts}__{global_guards}__{core}.csv")
 		})
 	}
 }
@@ -497,7 +523,8 @@ where
 		for line in &mut lines {
 			let output_dir = get_cache_dir(inpput_files_context, &input_filename)?;
 
-			let csv_output_path = output_dir.join(line.get_csv_filename());
+			let csv_output_path =
+				output_dir.join(line.get_csv_filename(inpput_files_context.guards()));
 			line.set_shared_csv_filename(&csv_output_path);
 		}
 
@@ -569,12 +596,13 @@ pub fn process_inputs(
 		}
 
 		if let Some(canonical_line) = canonical_lines.remove(&csv_output_path) {
-			let processor = LineProcessor::from_data_source(
+			let processor = LineProcessor::from_data_source_with_global_guards(
 				canonical_line.line.data_source.clone(),
 				Some(csv_output_path),
 				input_context.timestamp_format().clone(),
 				canonical_line.source_file_name().clone(),
 				input_context.ignore_invalid_timestamps(),
+				input_context.guards().clone(),
 			)?;
 
 			processors

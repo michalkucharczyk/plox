@@ -132,6 +132,13 @@ pub struct InputFilesContext {
 	#[arg(long, short = 't', default_value_t = false, help_heading = "Input files")]
 	#[serde(skip)]
 	ignore_invalid_timestamps: bool,
+
+	/// Optional guard strings to quickly filter out log lines using `strcmp`.
+	///
+	/// Only lines containing all guards will be passed for plotting data extraction.
+	#[arg(long = "guard", help_heading = "Input files")]
+	#[serde(default)]
+	guards: Vec<String>,
 }
 
 /// Global graph context shared across all panels and lines.
@@ -277,6 +284,10 @@ impl InputFilesContext {
 	pub fn ignore_invalid_timestamps(&self) -> bool {
 		self.ignore_invalid_timestamps
 	}
+
+	pub fn guards(&self) -> &Vec<String> {
+		&self.guards
+	}
 }
 
 /// Determines the output file paths, based on selected backend.
@@ -301,6 +312,8 @@ impl GraphFullContext {
 		set_if_none!(output_graph_ctx.per_file_panels);
 		set_if_none!(output_graph_ctx.inline_output);
 		set_if_none!(input_files_ctx.timestamp_format);
+
+		self.input_files_ctx.guards.extend(other.input_files_ctx.guards);
 	}
 
 	pub fn new_with_input(input: Vec<PathBuf>) -> Self {
