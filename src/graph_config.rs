@@ -116,6 +116,7 @@ pub struct InputFilesContext {
 	/// [default: '%Y-%m-%d %H:%M:%S%.3f']
 	#[arg(
 		long,
+		short = 'r',
 		default_value = None,
 		help_heading = "Input files",
 	)]
