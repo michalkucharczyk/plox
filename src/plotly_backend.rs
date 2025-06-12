@@ -16,7 +16,7 @@ use std::process::Command;
 use std::{fs::File, io};
 use std::{io::BufReader, num::ParseFloatError};
 use tracing::warn;
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 //todo:
 // - logging
@@ -112,12 +112,13 @@ impl From<MarkerSize> for usize {
 	}
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct PanelTemplateInput {
 	id: String,
 	title: String,
 	traces_json: String,
 	yaxis_scale: String,
+	time_range: Option<(String, String)>,
 }
 
 fn build_trace(
@@ -202,7 +203,7 @@ pub fn write_plotly_html_inner(
 			continue;
 		}
 		let id = format!("plot{}", panel_idx);
-		debug!(target:LOG_TARGET,"drawing {id}: {:#?}",panel);
+		trace!(target:LOG_TARGET,"drawing {id}: {:#?}",panel);
 		let mut traces = vec![];
 
 		for line in &panel.lines {
@@ -210,7 +211,7 @@ pub fn write_plotly_html_inner(
 		}
 
 		let traces_json = serde_json::to_string(&traces)?;
-		panels.push(PanelTemplateInput {
+		let panel = PanelTemplateInput {
 			id,
 			traces_json,
 			title: panel.title().join(" | ").to_string(),
@@ -218,7 +219,13 @@ pub fn write_plotly_html_inner(
 				Some(AxisScale::Linear) | None => "linear".to_string(),
 				Some(AxisScale::Log) => "log".to_string(),
 			},
-		});
+			time_range: panel.time_range.map(|(start, end)| {
+				let format = "%Y-%m-%d %H:%M:%S";
+				(format!("{}", start.format(format)), format!("{}", end.format(format)))
+			}),
+		};
+		// debug!(target:APPV,"panel: {:?}", panel);
+		panels.push(panel);
 	}
 
 	let raw_template = include_str!("../templates/plotly_template.html"); // relative to this Rust file
