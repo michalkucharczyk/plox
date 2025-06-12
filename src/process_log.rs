@@ -1805,6 +1805,87 @@ mod tests {
 	}
 
 	#[test]
+	fn test_line_processing_multi_line_regex_global_guards() {
+		init_tracing_test();
+		let log_lines = [
+			(
+				true,
+				"2025-04-03 11:32:48.027 AAA BBB CCCC INFO main: operation duration:1.5ns, val:127.0",
+			),
+			(
+				true,
+				"2025-04-03 11:32:48.054 AAA BBB CCCC INFO main: operation duration:2.5us, val:127.0",
+			),
+			(
+				false,
+				"2025-04-03 11:32:49.054 AAA CCCC INFO main: operation duration:4.5ms, val:127.0",
+			),
+			(false, "2025-04-03 11:32:49.054 AAA INFO main: operation duration:4.5ms, val:127.0"),
+			(
+				true,
+				"2025-04-03 11:32:49.054 AAA BBB CCCC INFO main: operation duration:3.5ms, val:127.0",
+			),
+			(
+				true,
+				"2025-04-03 11:33:49.154 AAA BBB CCCC INFO main: operation duration:4.5s, val:127.0",
+			),
+			(
+				false,
+				"2025-04-04 11:33:49.154 AAX BBB CCCC INFO main: operation duration:2.5s, val:127.0",
+			),
+			(
+				true,
+				"2025-04-04 11:33:49.154 AAA BBB CCCC INFO main: operation duration:2.5s, val:127.0",
+			),
+			(false, "2025-04-04 11:33:49.154 INFO main: operation duration:2.2s, val:127.0"),
+		];
+
+		let resolved_line = plot_line("input.log", Some("operation"), r"duration:([\d\.]+)(\w+)?");
+
+		let mut processor = LineProcessor::from_data_source_with_global_guards(
+			resolved_line.line.data_source,
+			Some(PathBuf::from("output.csv")),
+			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
+			false,
+			vec!["AAA".to_string(), "BBB".to_string(), "CCCC".to_string()],
+		)
+		.unwrap();
+
+		for (guard_should_match, log_line) in log_lines {
+			assert_eq!(processor.guard_matches(log_line), guard_should_match);
+			let (guard_matched, matched) = processor.try_match(log_line).unwrap();
+			assert_eq!(guard_matched, guard_should_match);
+			if guard_should_match {
+				let (captures, timestamp) = matched.unwrap();
+				processor.process(captures, timestamp);
+			}
+		}
+
+		assert_eq!(processor.records.len(), 5);
+		let record = &processor.records[0];
+		assert_eq!(record.value, 1.5 / 1_000_000.0);
+		assert_eq!(record.count, 1);
+		assert_eq!(record.diff, None);
+		let record = &processor.records[1];
+		assert_eq!(record.value, 2.5 / 1000.0);
+		assert_eq!(record.count, 2);
+		assert_eq!(record.diff.unwrap(), 27.0);
+		let record = &processor.records[2];
+		assert_eq!(record.value, 3.5);
+		assert_eq!(record.count, 3);
+		assert_eq!(record.diff.unwrap(), 1000.0);
+		let record = &processor.records[3];
+		assert_eq!(record.value, 4500.0);
+		assert_eq!(record.count, 4);
+		assert_eq!(record.diff.unwrap(), 60100.0);
+		let record = &processor.records[4];
+		assert_eq!(record.value, 2500.0);
+		assert_eq!(record.count, 5);
+		assert_eq!(record.diff.unwrap(), 86400000.0);
+	}
+
+	#[test]
 	fn test_line_processing_multi_line_regex() {
 		init_tracing_test();
 		let log_lines = [
