@@ -63,6 +63,12 @@ Data sources - plotted line types:
             <pattern>: Substring or regex pattern to match in log lines
           
 
+  --field-value-sum <guard> <field>
+          Plot a cumulative sum of numeric field from logs
+            <guard>: Optional guard string to quickly filter out log lines using `strcmp`
+            <field>: The name of the field to parse as numeric or regex. Refer to "Plot Field Regex" help section for more details
+          
+
   --plot <guard> <field>
           Plot a numeric field from logs
             <guard>: Optional guard string to quickly filter out log lines using `strcmp`

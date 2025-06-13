@@ -1,0 +1,12 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "field_value_sum"
+field = "duration"
+file_name = "x.log"
+style = "points"
+line_color = "red"
+yaxis = "y2"
+marker_type = "circle"
+marker_color = "blue"
+marker_size = 2.0

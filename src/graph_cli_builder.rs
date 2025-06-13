@@ -696,6 +696,11 @@ mod tests {
 			self.line = Some(DataSource::FieldValue(FieldCaptureSpec { guard, field }));
 			self
 		}
+
+		pub fn with_field_value_sum_line(mut self, guard: Option<String>, field: String) -> Self {
+			self.line = Some(DataSource::FieldValueSum(FieldCaptureSpec { guard, field }));
+			self
+		}
 	}
 
 	#[test]
@@ -1125,6 +1130,58 @@ mod tests {
 						.apply_param(LineParam::MarkerColor("black".into()))
 						.apply_param(LineParam::YAxis(YAxis::Y2))
 						.apply_param(LineParam::InputFileName("plot2.log".into()))
+						.build()
+						.unwrap(),
+				)
+				.build(),
+		)
+	}
+
+	#[test]
+	fn test_15() {
+		check_ok(
+			vec!["--field-value-sum", "c1", "d"],
+			"tests/test-files/config15.toml",
+			GraphConfigBuilder::new()
+				.with_default_panel()
+				.with_line(
+					LineBuilder::new()
+						.with_field_value_sum_line(Some("c1".into()), "d".into())
+						.build()
+						.unwrap(),
+				)
+				.build(),
+		);
+	}
+
+	#[test]
+	fn test_16() {
+		check_ok(
+			vec![
+				"--field-value-sum",
+				"duration",
+				"--file-name",
+				"x.log",
+				"--yaxis",
+				"y2",
+				"--line-color",
+				"red",
+				"--marker-type",
+				"circle",
+				"--marker-color",
+				"blue",
+			],
+			"tests/test-files/config16.toml",
+			GraphConfigBuilder::new()
+				.with_default_panel()
+				.with_line(
+					LineBuilder::new()
+						.with_field_value_sum_line(None, "duration".into())
+						.apply_param(LineParam::LineColor("red".into()))
+						.apply_param(LineParam::MarkerType("circle".into()))
+						.apply_param(LineParam::MarkerColor("blue".into()))
+						.apply_param(LineParam::YAxis(YAxis::Y2))
+						.apply_param(LineParam::InputFileName("x.log".into()))
 						.build()
 						.unwrap(),
 				)

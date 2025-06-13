@@ -637,6 +637,9 @@ pub enum DataSource {
 	/// Plot the time delta between consecutive occurrences of `pattern`.
 	EventDelta(EventDeltaSpec),
 
+	/// Plot a cumulative sum of numeric field from logs.
+	FieldValueSum(FieldCaptureSpec),
+
 	/// Plot a numeric field from logs.
 	///
 	/// This is the most common data source type.
@@ -660,6 +663,10 @@ impl DataSource {
 
 	pub fn new_plot_field(guard: Option<String>, field: String) -> Self {
 		DataSource::FieldValue(FieldCaptureSpec { guard, field })
+	}
+
+	pub fn new_field_sum(guard: Option<String>, field: String) -> Self {
+		DataSource::FieldValueSum(FieldCaptureSpec { guard, field })
 	}
 }
 

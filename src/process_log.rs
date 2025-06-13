@@ -70,6 +70,7 @@ impl Error {
 #[derive(Debug)]
 struct ProcessingState {
 	count: u64,
+	value_sum: f64,
 	last_timestamp: Option<ExtractedNaiveDateTime>,
 }
 
@@ -81,6 +82,7 @@ struct LogRecord {
 	pub value: f64,
 	pub count: u64,
 	pub diff: Option<f64>,
+	pub value_sum: f64,
 }
 
 #[derive(Debug)]
@@ -172,7 +174,7 @@ impl LineProcessor {
 	pub fn guard_matches(&self, log_line: &str) -> bool {
 		self.data_source
 			.guard()
-			.into_iter()
+			.iter()
 			.chain(self.global_guards.iter())
 			.all(|g| log_line.contains(g))
 	}
@@ -227,7 +229,7 @@ impl LineProcessor {
 		match &self.data_source {
 			DataSource::EventValue { yvalue, .. } => value = *yvalue,
 			DataSource::EventCount { .. } | DataSource::EventDelta { .. } => (),
-			DataSource::FieldValue { .. } => {
+			DataSource::FieldValue { .. } | DataSource::FieldValueSum { .. } => {
 				let raw_val = caps.get(1).map(|m| m.as_str()).unwrap_or("0");
 				let unit = caps.get(2).map(|m| m.as_str()).unwrap_or("");
 				value = match normalize_value(raw_val, unit) {
@@ -238,9 +240,10 @@ impl LineProcessor {
 					},
 				};
 			},
-		}
+		};
+		let value_sum = self.state.compute_sum(value);
 
-		self.records.push(LogRecord { date, time, value, count, diff });
+		self.records.push(LogRecord { date, time, value, count, diff, value_sum });
 	}
 
 	fn write_csv(&self) -> Result<(), Error> {
@@ -249,33 +252,35 @@ impl LineProcessor {
 			File::create(filename).map_err(|e| Error::FileIoError(filename.clone(), e))?;
 		match self.timestamp_format {
 			TimestampFormat::Time(_) => {
-				writeln!(file, "date,time,value,count,delta")
+				writeln!(file, "date,time,value,count,delta,value_sum")
 					.map_err(|e| Error::FileIoError(filename.clone(), e))?;
 				for r in &self.records {
 					//todo: clean up date
 					writeln!(
 						file,
-						"2025-01-01,{},{},{},{}",
+						"2025-01-01,{},{},{},{},{}",
 						r.time,
 						r.value,
 						r.count,
-						r.diff.unwrap_or(0.0)
+						r.diff.unwrap_or(0.0),
+						r.value_sum
 					)
 					.map_err(|e| Error::new_file_io_error(filename, e))?;
 				}
 			},
 			TimestampFormat::DateTime(_) => {
-				writeln!(file, "date,time,value,count,delta")
+				writeln!(file, "date,time,value,count,delta,value_sum")
 					.map_err(|e| Error::new_file_io_error(filename, e))?;
 				for r in &self.records {
 					writeln!(
 						file,
-						"{},{},{},{},{}",
+						"{},{},{},{},{},{}",
 						r.date.as_ref().expect("date should be set"),
 						r.time,
 						r.value,
 						r.count,
-						r.diff.unwrap_or(0.0)
+						r.diff.unwrap_or(0.0),
+						r.value_sum
 					)
 					.map_err(|e| Error::new_file_io_error(filename, e))?;
 				}
@@ -341,6 +346,9 @@ impl DataSource {
 			DataSource::FieldValue(FieldCaptureSpec { guard: Some(guard), .. }) => {
 				format!("value of {} {}", guard, self.raw_pattern())
 			},
+			DataSource::FieldValueSum(FieldCaptureSpec { guard: Some(guard), .. }) => {
+				format!("sum of values of {} {}", guard, self.raw_pattern())
+			},
 			DataSource::EventValue { guard: Some(guard), .. } => {
 				format!("presence of {} {}", guard, self.raw_pattern())
 			},
@@ -352,6 +360,9 @@ impl DataSource {
 			},
 			DataSource::FieldValue(FieldCaptureSpec { guard: None, .. }) => {
 				format!("value of {}", self.raw_pattern())
+			},
+			DataSource::FieldValueSum(FieldCaptureSpec { guard: None, .. }) => {
+				format!("sum values of {}", self.raw_pattern())
 			},
 			DataSource::EventValue { guard: None, .. } => {
 				format!("presence of {}", self.raw_pattern())
@@ -372,7 +383,8 @@ impl DataSource {
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
 			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
-			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => field.clone(),
+			DataSource::FieldValue(FieldCaptureSpec { field, .. })
+			| DataSource::FieldValueSum(FieldCaptureSpec { field, .. }) => field.clone(),
 		}
 	}
 
@@ -405,7 +417,8 @@ impl DataSource {
 			DataSource::EventValue { pattern, .. }
 			| DataSource::EventCount { pattern, .. }
 			| DataSource::EventDelta(EventDeltaSpec { pattern, .. }) => pattern.clone(),
-			DataSource::FieldValue(FieldCaptureSpec { field, .. }) => {
+			DataSource::FieldValue(FieldCaptureSpec { field, .. })
+			| DataSource::FieldValueSum(FieldCaptureSpec { field, .. }) => {
 				if self.is_field_valid_regex() {
 					field.clone()
 				} else {
@@ -426,12 +439,14 @@ impl DataSource {
 			| DataSource::EventCount { guard, .. }
 			| DataSource::EventDelta(EventDeltaSpec { guard, .. })
 			| DataSource::FieldValue(FieldCaptureSpec { guard, .. }) => guard,
+			| DataSource::FieldValueSum(FieldCaptureSpec { guard, .. }) => guard,
 		}
 	}
 
 	pub fn csv_data_column_for_plot(&self) -> &'static str {
 		match &self {
 			DataSource::FieldValue { .. } | DataSource::EventValue { .. } => "value",
+			DataSource::FieldValueSum { .. } => "value_sum",
 			DataSource::EventCount { .. } => "count",
 			DataSource::EventDelta { .. } => "delta",
 		}
@@ -465,7 +480,7 @@ impl ResolvedLine {
 			DataSource::EventValue { yvalue, .. } => format!("value_{yvalue}_{tag}"),
 			DataSource::EventCount { .. } => format!("count_{tag}"),
 			DataSource::EventDelta { .. } => format!("delta_{tag}"),
-			DataSource::FieldValue { .. } => tag,
+			DataSource::FieldValue { .. } | DataSource::FieldValueSum { .. } => tag,
 		};
 
 		let log_name = self
@@ -777,7 +792,7 @@ fn normalize_value(value: &str, unit: &str) -> Option<f64> {
 
 impl ProcessingState {
 	fn new() -> Self {
-		Self { count: 0, last_timestamp: None }
+		Self { count: 0, last_timestamp: None, value_sum: 0.0 }
 	}
 
 	fn next_count(&mut self) -> u64 {
@@ -791,6 +806,11 @@ impl ProcessingState {
 			.map(|prev| current.signed_duration_since(prev).num_milliseconds() as f64);
 		self.last_timestamp = Some(current);
 		diff
+	}
+
+	fn compute_sum(&mut self, value: f64) -> f64 {
+		self.value_sum += value;
+		self.value_sum
 	}
 }
 
@@ -1054,6 +1074,8 @@ struct CvsLogRecord {
 	#[allow(dead_code)]
 	pub count: u64,
 	pub delta: f64,
+	#[allow(dead_code)]
+	pub value_sum: f64,
 }
 
 pub fn display_stats(
@@ -1206,6 +1228,20 @@ mod tests {
 	) -> ResolvedLine {
 		ResolvedLine::from_explicit_name(
 			Line::new_with_data_source(DataSource::new_plot_field(
+				guard.map(Into::into),
+				field.into(),
+			)),
+			PathBuf::from(input_file),
+		)
+	}
+
+	fn field_sum_line(
+		input_file: &'static str,
+		guard: Option<&'static str>,
+		field: &'static str,
+	) -> ResolvedLine {
+		ResolvedLine::from_explicit_name(
+			Line::new_with_data_source(DataSource::new_field_sum(
 				guard.map(Into::into),
 				field.into(),
 			)),
@@ -1800,6 +1836,64 @@ mod tests {
 		assert_eq!(record.diff.unwrap(), 60100.0);
 		let record = &processor.records[4];
 		assert_eq!(record.value, 2.5);
+		assert_eq!(record.count, 5);
+		assert_eq!(record.diff.unwrap(), 86400000.0);
+	}
+
+	#[test]
+	fn test_line_processing_multi_line_field_sum() {
+		init_tracing_test();
+		let log_lines = [
+			"2025-04-03 11:32:48.027 INFO main: operation duration=1.5",
+			"2025-04-03 11:32:48.054 INFO main: operation duration=2.5",
+			"2025-04-03 11:32:49.054 INFO main: operation duration=3.5",
+			"2025-04-03 11:33:49.154 INFO main: operation duration=4.5",
+			"2025-04-04 11:33:49.154 INFO main: operation duration=2.5",
+		];
+
+		let resolved_line = field_sum_line("input.log", Some("operation"), r"duration");
+
+		let mut processor = LineProcessor::from_data_source(
+			resolved_line.line.data_source,
+			Some(PathBuf::from("output.csv")),
+			DEFAULT_TIMESTAMP_FORMAT,
+			"input.log".into(),
+			false,
+		)
+		.unwrap();
+
+		for log_line in log_lines {
+			assert!(processor.guard_matches(log_line));
+			let (g, matched) = processor.try_match(log_line).unwrap();
+			let (captures, timestamp) = matched.unwrap();
+			assert!(g);
+			processor.process(captures, timestamp);
+		}
+
+		assert_eq!(processor.records.len(), 5);
+		let record = &processor.records[0];
+		assert_eq!(record.value, 1.5);
+		assert_eq!(record.value_sum, 1.5);
+		assert_eq!(record.count, 1);
+		assert_eq!(record.diff, None);
+		let record = &processor.records[1];
+		assert_eq!(record.value, 2.5);
+		assert_eq!(record.value_sum, 4.0);
+		assert_eq!(record.count, 2);
+		assert_eq!(record.diff.unwrap(), 27.0);
+		let record = &processor.records[2];
+		assert_eq!(record.value, 3.5);
+		assert_eq!(record.value_sum, 7.5);
+		assert_eq!(record.count, 3);
+		assert_eq!(record.diff.unwrap(), 1000.0);
+		let record = &processor.records[3];
+		assert_eq!(record.value, 4.5);
+		assert_eq!(record.value_sum, 12.0);
+		assert_eq!(record.count, 4);
+		assert_eq!(record.diff.unwrap(), 60100.0);
+		let record = &processor.records[4];
+		assert_eq!(record.value, 2.5);
+		assert_eq!(record.value_sum, 14.5);
 		assert_eq!(record.count, 5);
 		assert_eq!(record.diff.unwrap(), 86400000.0);
 	}
