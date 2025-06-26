@@ -299,14 +299,6 @@ pub enum OutputFilePaths {
 	Plotly(PathBuf),
 }
 
-/// Determines the output file paths, based on selected backend.
-pub enum OutputFilePaths {
-	/// Tuple containging the path to the image and the path to the gnuplot script
-	Gnuplot((PathBuf, PathBuf)),
-	/// The path to the HTML file
-	Plotly(PathBuf),
-}
-
 impl GraphFullContext {
 	/// Intended to merge context given on CLI with one read from file
 	pub fn merge_with_other(&mut self, other: Self) {
