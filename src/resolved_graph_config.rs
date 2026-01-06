@@ -452,7 +452,8 @@ mod tests {
 				DataSource::EventValue { ref pattern, .. }
 				| DataSource::EventCount { ref pattern, .. }
 				| DataSource::EventDelta(EventDeltaSpec { ref pattern, .. })
-				| DataSource::FieldValue(FieldCaptureSpec { field: ref pattern, .. }) => pattern.clone(),
+				| DataSource::FieldValue(FieldCaptureSpec { field: ref pattern, .. })
+				| DataSource::FieldValueSum(FieldCaptureSpec { field: ref pattern, .. }) => pattern.clone(),
 			}
 		}
 	}

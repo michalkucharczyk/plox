@@ -1,0 +1,8 @@
+[[panels]]
+
+[[panels.lines]]
+data_source = "field_value_sum"
+guard = "c1"
+field = "d"
+style = "points"
+marker_size = 2.0

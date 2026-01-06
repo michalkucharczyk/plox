@@ -275,7 +275,7 @@ pub fn write_gnuplot_script(
 				title = ?panel.title(),
 				"No data points for panel.");
 		};
-		for (j, line) in non_empty_lines {
+		for (idx, (line_index, line)) in non_empty_lines.iter().enumerate() {
 			let mut style_parts: Vec<String> = Vec::new();
 
 			style_parts.push(line.line.params.style.to_gnuplot().into());
@@ -316,13 +316,13 @@ pub fn write_gnuplot_script(
 
 			write!(
 				file,
-				"   csv_data_file_{j:04} using (combine_datetime('date','time')):'{}' {} title '{}'",
+				"   csv_data_file_{line_index:04} using (combine_datetime('date','time')):'{}' {} title '{}'",
 				line.csv_data_column_for_plot(),
 				style,
 				line.title(has_multiple_input_files),
 			)?;
 
-			if j != panel.lines.len() - 1 {
+			if idx != non_empty_lines.len() - 1 {
 				gpwr!(file, ", \\")?;
 			} else {
 				gpwr!(file, "")?;

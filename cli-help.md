@@ -63,6 +63,12 @@ Data sources - plotted line types:
             <pattern>: Substring or regex pattern to match in log lines
           
 
+  --field-value-sum <guard> <field>
+          Plot a cumulative sum of numeric field from logs
+            <guard>: Optional guard string to quickly filter out log lines using `strcmp`
+            <field>: The name of the field to parse as numeric or regex. Refer to "Plot Field Regex" help section for more details
+          
+
   --plot <guard> <field>
           Plot a numeric field from logs
             <guard>: Optional guard string to quickly filter out log lines using `strcmp`
@@ -159,7 +165,7 @@ Input files:
   -i, --input <INPUT>
           Input log files to be processed. Comma-separated list of input log files to be processed
 
-      --timestamp-format <TIMESTAMP_FORMAT>
+  -r, --timestamp-format <TIMESTAMP_FORMAT>
           The format of the timestamp which is used in logs.
           
           For exact format specifiers refer to: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
@@ -170,6 +176,11 @@ Input files:
           Do not fail if log contains lines with invalid timestamp.
           
           Ignores invalid timestamps. Useful when log contains line with invalid or no timestamp (e.g. stacktraces).
+
+      --guard <GUARDS>
+          Optional guard strings to quickly filter out log lines using `strcmp`.
+          
+          Only lines containing all guards will be passed for plotting data extraction.
 
   -c, --config <FILE>
           Path to TOML config file containing panels layout.
@@ -259,14 +270,15 @@ The tool is designed to parse timestamped logs. The timestamp format used in the
 For the the exact format specifiers refer to: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 
 Examples:
-- "2025-04-03 11:32:48.027"  | "%Y-%m-%d %H:%M:%S%.3f"
-- "08:26:13 AM"              | "%I:%M:%S %p"
-- "2025 035 08:26:13 AM"     | "%Y %j %I:%M:%S %p"
-- "035 08:26:13 AM"          | "%j %I:%M:%S %p"
-- "[1577834199]"             | "[%s]"
-- "1577834199"               | "%s"
-- "Apr 20 08:26:13 AM"       | "%b %d %I:%M:%S %p"
-- "[100.333]"                | not supported...
+- "2025-04-03 11:32:48.027"     | "%Y-%m-%d %H:%M:%S%.3f"
+- "2025-06-10T12:08:41.600447Z" | "%Y-%m-%dT%H:%M:%S%.6fZ"
+- "08:26:13 AM"                 | "%I:%M:%S %p"
+- "2025 035 08:26:13 AM"        | "%Y %j %I:%M:%S %p"
+- "035 08:26:13 AM"             | "%j %I:%M:%S %p"
+- "[1577834199]"                | "[%s]"
+- "1577834199"                  | "%s"
+- "Apr 20 08:26:13 AM"          | "%b %d %I:%M:%S %p"
+- "[100.333]"                   | not supported...
 
 Field regex:
 Regex pattern shall contain a single capture group for matching value only, or two

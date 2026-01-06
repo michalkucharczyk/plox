@@ -26,6 +26,7 @@ impl DataSource {
 	const CLI_NAME_EVENT: &str = "event";
 	const CLI_NAME_EVENT_COUNT: &str = "event-count";
 	const CLI_NAME_EVENT_DELTA: &str = "event-delta";
+	const CLI_NAME_FIELD_VALUE_SUM: &str = "field-value-sum";
 
 	pub fn get_cli_ids() -> Vec<String> {
 		DummyDataSourceSubcommand::command()
@@ -82,6 +83,23 @@ impl DataSource {
 					field: val[0].to_string(),
 				}),
 				2 => DataSource::FieldValue(FieldCaptureSpec {
+					guard: Some(val[0].to_string()),
+					field: val[1].to_string(),
+				}),
+				_ => {
+					return Err(Error::GeneralCliParseError(format!(
+						"Bad parameter count ({}) for {}. This is bug.",
+						val.len(),
+						id
+					)));
+				},
+			},
+			Self::CLI_NAME_FIELD_VALUE_SUM => match val.len() {
+				1 => DataSource::FieldValueSum(FieldCaptureSpec {
+					guard: None,
+					field: val[0].to_string(),
+				}),
+				2 => DataSource::FieldValueSum(FieldCaptureSpec {
 					guard: Some(val[0].to_string()),
 					field: val[1].to_string(),
 				}),
